@@ -65,6 +65,21 @@ reset(context)
 	}
 
 File::RsyncP::Digest
+protocol(context, protocol=26)
+    INPUT:
+	File::RsyncP::Digest	context
+	unsigned int protocol
+    CODE:
+	{
+	    if ( protocol <= 26 ) {
+		context->rsyncBug = 1;
+	    } else {
+		context->rsyncBug = 0;
+	    }
+	    RETVAL = context;
+	}
+
+File::RsyncP::Digest
 add(context, ...)
 	File::RsyncP::Digest	context
     CODE:
@@ -90,6 +105,26 @@ digest(context)
 
 	    MD4FinalRsync(digeststr, context);
 	    ST(0) = sv_2mortal(newSVpv((char *)digeststr, 16));
+	}
+
+SV *
+digest2(context)
+	File::RsyncP::Digest	context
+    CODE:
+	{
+	    unsigned char digeststr[32];
+	    MD4_CTX context2 = *context;
+
+	    /*
+	     * Return 2 MD4s (32 bytes): first is rsync buggy version
+	     * (protocol <= 26) and second is correct version (>= 27).
+	     */
+	    context2.rsyncBug = !context->rsyncBug;
+	    MD4FinalRsync(digeststr + 0,
+			context->rsyncBug ? context : &context2);
+	    MD4FinalRsync(digeststr + 16,
+			context->rsyncBug ? &context2 : context);
+	    ST(0) = sv_2mortal(newSVpv((char *)digeststr, 32));
 	}
 
 SV *

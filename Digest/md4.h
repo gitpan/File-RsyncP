@@ -28,6 +28,14 @@ typedef struct {
   UINT4 state[4];                                   /* state (ABCD) */
   UINT4 count[2];        /* number of bits, modulo 2^64 (lsb first) */
   unsigned char buffer[64];                         /* input buffer */
+  /*
+   * MD4 finalization for Rsync compatability.  For protocol version <= 26
+   * (rsync <= 2.5.6) rsync has a bug where it doesn't append the pad when
+   * the last fragment is empty (message size is a multiple of 64).  Rsync
+   * also only has a 32 bit byte counter, so the number of bits overflows
+   * for >= 512MB.  Both bugs are fixed for protocol version >= 27.
+   */
+  unsigned char rsyncBug;
 } MD4_CTX;
 
 void MD4Init PROTO_LIST ((MD4_CTX *));

@@ -31,7 +31,7 @@
 #
 #========================================================================
 #
-# Version 0.42, released 13 Jul 2003.
+# Version 0.43, released 19 Jul 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -64,7 +64,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 	
 );
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 bootstrap File::RsyncP::FileList $VERSION;
 

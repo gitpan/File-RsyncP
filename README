@@ -1,7 +1,7 @@
 File::RsyncP
 ============
 
-Version 0.42, released 13 Jul 2003.
+Version 0.43, released 19 Jul 2003.
 
 File::RsyncP is a perl implementation of an Rsync client.  It is
 compatible with Rsync 2.5.5 (protocol version 26).  It can send

@@ -31,7 +31,7 @@
 #
 #========================================================================
 #
-# Version 0.42, released 13 Jul 2003.
+# Version 0.43, released 19 Jul 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -53,7 +53,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '0.42';
+$VERSION = '0.43';
 
 bootstrap File::RsyncP::Digest $VERSION;
 
@@ -135,6 +135,9 @@ File::RsyncP::Digest - Perl interface to rsync message digest algorithms
     use File::RsyncP::Digest;
     
     $rsDigest = new File::RsyncP::Digest;
+
+    # specify rsync protocol version (default is <= 26 -> buggy digests).
+    $rsDigest->protocol(version);
     
     # file MD4 digests
     $rsDigest->reset();
@@ -143,6 +146,9 @@ File::RsyncP::Digest - Perl interface to rsync message digest algorithms
 
     $digest = $rsDigest->digest();
     $string = $rsDigest->hexdigest();
+
+    # Return 32 byte pair of digests (protocol <= 26 and >= 27).
+    $digestPair = $rsDigest->digest2();
 
     $digest = File::RsyncP::Digest->hash(SCALAR);
     $string = File::RsyncP::Digest->hexhash(SCALAR);
@@ -221,8 +227,24 @@ it overflows for file sizes bigger than 512MB.
 
 The effects of these bugs are benign: the MD4 digest should not be
 cryptographically weakened and both sides are consistent. 
-File::RsyncP::Digest replicates these bugs to make sure the digest
-match those computed by rsync.
+
+This module implements both versions of the MD4 digest: the 
+buggy version for protocol versions <= 26 and the correct
+version for protocol versions >= 27.  The default mode is
+the buggy version (protocol versions <= 26).
+
+You can specify the rsync protocol version to determine which
+MD4 version is used:
+
+    # specify rsync protocol version (default is <= 26 -> buggy digests).
+    $rsDigest->protocol(version);
+
+Also, you can get both digests in a single call.  The result is
+returned as a single 32 byte scalar: the first 16 bytes is the
+buggy digest and the second 16 bytes is the correct digest:
+
+    # Return 32 byte pair of digests (protocol <= 26 and >= 27).
+    $digestPair = $rsDigest->digest2();
 
 =head2 Usage
 

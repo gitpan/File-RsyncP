@@ -195,12 +195,12 @@
 struct file_struct {
 	unsigned flags;
 	time_t modtime;
-	OFF_T length;
+	double length;		/* crude portable way to get up to 2^51 */
 	mode_t mode;
 
-	INO64_T inode;
+	double inode;		/* crude portable way to get up to 2^51 */
 	/** Device this file lives upon */
-	DEV64_T dev;
+	double dev;		/* crude portable way to get up to 2^51 */
 
 	/** If this is a device node, the device number. */
 	DEV64_T rdev;
@@ -271,28 +271,6 @@ struct file_list {
          * flist.h, so keep this at the end of the struct...
          */
 	char lastname[MAXPATHLEN];
-};
-
-struct sum_buf {
-	OFF_T offset;		/* offset in file of this chunk */
-	int len;		/* length of chunk of file */
-	int i;			/* index of this chunk */
-	uint32 sum1;	        /* simple checksum */
-	char sum2[SUM_LENGTH];	/* checksum  */
-};
-
-struct sum_struct {
-	OFF_T flength;		/* total file length */
-	size_t count;		/* how many chunks */
-	size_t remainder;	/* flength % block_length */
-	size_t n;		/* block_length */
-	struct sum_buf *sums;	/* points to info for each chunk */
-};
-
-struct map_struct {
-	char *p;
-	int fd,p_size,p_len;
-	OFF_T file_size, p_offset, p_fd_offset;
 };
 
 struct exclude_struct {

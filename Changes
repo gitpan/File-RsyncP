@@ -1,5 +1,15 @@
 Revision history for Perl module File::RsyncP.
 
+0.43 Sun Jul 20 00:03:40 PDT 2003
+
+  - Changed file length, dev and inode to double.
+
+  - Added File::RsyncP::Digest->protocol, including support for
+    protocol version >= 27 (after MD4 fixes).
+
+  - Added File::RsyncP::Digest->digest2 that returns the old (buggy)
+    and new styles of the MD4 digest.
+
 0.42 Sat Jul 12 09:53:40 PDT 2003
 
   - Replaced regexp with split() due to 5.8.0 regexp performance problem.

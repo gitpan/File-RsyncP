@@ -7,7 +7,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN {print "1..14\n";}
+BEGIN {print "1..16\n";}
 END {print "not ok 1\n" unless $loaded;}
 use File::RsyncP::Digest;
 $loaded = 1;
@@ -25,9 +25,9 @@ package MD4Test;
 
 print (($md4 = new File::RsyncP::Digest) ? "ok 2\n" : "not ok 2\n");
 
-# 3: Basic test data as defined in RFC 1320
+# 3: Basic test data as defined in RFC 1320 (buggy version)
 
-%data = (
+%data26 = (
 	 ""	=> "0123456789abcdeffedcba9876543210",
 	 "a"	=> "bde52cb31de33e46245e05fbdbd6fb24",
 	 "abc"	=> "a448017aaf21d8525fc10ae87aa6729d",
@@ -44,13 +44,14 @@ print (($md4 = new File::RsyncP::Digest) ? "ok 2\n" : "not ok 2\n");
 );
 
 $failed = 0;
-foreach (sort(keys(%data)))
+foreach (sort(keys(%data26)))
 {
     $md4->reset;
+    $md4->protocol(26);
     $md4->add($_);
     $digest = $md4->digest;
     $hex = unpack("H*", $digest);
-    if ($hex ne $data{$_})
+    if ($hex ne $data26{$_})
     {
 	$failed++;
     }
@@ -154,3 +155,70 @@ close(F);
 
 $hex = File::RsyncP::Digest->hexhash($data);
 print ($hex eq $orig ? "ok 14\n" : "not ok 14\n");
+
+# 15: Basic test data as defined in RFC 1320 (non-buggy version)
+
+%data27 = (
+	 ""	=> "31d6cfe0d16ae931b73c59d7e0c089c0",
+	 "a"	=> "bde52cb31de33e46245e05fbdbd6fb24",
+	 "abc"	=> "a448017aaf21d8525fc10ae87aa6729d",
+	 "message digest"
+		=> "d9130a8164549fe818874806e1c7014b",
+	 "abcdefghijklmnopqrstuvwxyz"
+		=> "d79e1c308aa5bbcdeea8ed63df412da9",
+	 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+		=> "043f8582f241db351ce627e153e7f0e4",
+	 "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+		=> "e33b4ddc9c38f2199c3e7b164fcc0536",
+	 # From draft-ietf-pppext-mschap-00.txt:
+	 "\x4D\x00\x79\x00\x50\x00\x77\x00" => "fc156af7edcd6c0edde3337d427f4eac",
+);
+
+$failed = 0;
+foreach (sort(keys(%data27)))
+{
+    $md4->reset;
+    $md4->protocol(27);
+    $md4->add($_);
+    $digest = $md4->digest;
+    $hex = unpack("H*", $digest);
+    if ($hex ne $data27{$_})
+    {
+	$failed++;
+    }
+}
+print ($failed ? "not ok 15\n" : "ok 15\n");
+
+# 16: test data using both buggy and non-buggy versions
+
+%data27 = (
+	 ""	=> "31d6cfe0d16ae931b73c59d7e0c089c0",
+	 "a"	=> "bde52cb31de33e46245e05fbdbd6fb24",
+	 "abc"	=> "a448017aaf21d8525fc10ae87aa6729d",
+	 "message digest"
+		=> "d9130a8164549fe818874806e1c7014b",
+	 "abcdefghijklmnopqrstuvwxyz"
+		=> "d79e1c308aa5bbcdeea8ed63df412da9",
+	 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+		=> "043f8582f241db351ce627e153e7f0e4",
+	 "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+		=> "e33b4ddc9c38f2199c3e7b164fcc0536",
+	 # From draft-ietf-pppext-mschap-00.txt:
+	 "\x4D\x00\x79\x00\x50\x00\x77\x00" => "fc156af7edcd6c0edde3337d427f4eac",
+);
+
+$failed = 0;
+foreach (sort(keys(%data27)))
+{
+    $md4->reset;
+    $md4->protocol(27);
+    $md4->add($_);
+    $digest = $md4->digest2;
+    $hex = unpack("H*", $digest);
+    if ($hex ne "$data26{$_}$data27{$_}" )
+    {
+	$failed++;
+    }
+}
+print ($failed ? "not ok 16\n" : "ok 16\n");
+
