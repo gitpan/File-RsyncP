@@ -30,7 +30,7 @@
 #
 #========================================================================
 #
-# Version 0.51, released 16 May 2004.
+# Version 0.52, released 29 May 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -45,7 +45,7 @@ use File::Find;
 use Data::Dumper;
 
 use vars qw($VERSION);
-$VERSION = '0.51';
+$VERSION = '0.52';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory

@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.51, released 16 May 2004.
+# Version 0.52, released 29 May 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -48,9 +48,10 @@ use File::RsyncP::FileList;
 use Getopt::Long;
 use Data::Dumper;
 use Config;
+use Fcntl;
 
 use vars qw($VERSION);
-$VERSION = '0.51';
+$VERSION = '0.52';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -350,7 +351,8 @@ sub go
         #
         # Dup the $rs->{fh} socket file handle into two pieces: read-only
         # and write-only.  The child gets the read-only handle and
-        # we keep the write-only one.
+        # we keep the write-only one.  We make the write-only handle
+        # non-blocking.
         # 
         my $pid;
         local(*RH, *WH, *FHWr, *FHRd);
@@ -407,6 +409,20 @@ sub go
         close(WH);
         close(FHRd);
         $rs->{fh} = *FHWr;
+
+	#
+	# Make our write handle non-blocking
+	#
+	my $flags = '';
+	if ( fcntl($rs->{fh}, F_GETFL, $flags) ) {
+	    $flags |= O_NONBLOCK;
+	    if ( !fcntl($rs->{fh}, F_SETFL, $flags) ) {
+		$rs->log("Parent fcntl(F_SETFL) failed; non-block set failed");
+	    }
+	} else {
+	    $rs->log("Parent fcntl(F_GETFL) failed; non-block failed");
+	}
+
 	$rs->{childFh}  = *RH;
 	$rs->{childPID} = $pid;
 	$rs->log("Child PID is $pid") if ( $rs->{logLevel} >= 2 );
@@ -1062,6 +1078,10 @@ sub getData
     alarm($rs->{timeout}) if ( $rs->{timeout} );
     while ( length($rs->{readData}) < $len ) {
 	return -1 if ( $rs->{abort} );
+	my $ein;
+	vec($ein, fileno($rs->{fh}), 1) = 1;
+	select(my $rout = $ein, undef, $ein, undef);
+	return -1 if ( $rs->{abort} );
         sysread($rs->{fh}, $data, 65536);
         if ( length($data) == 0 ) {
             $rs->log("Read EOF: $!") if ( $rs->{logLevel} >= 1 );
@@ -1123,8 +1143,7 @@ sub writeData
     my($rs, $data, $flush) = @_;    
 
     $rs->{writeBuf} .= $data;
-    #$rs->writeFlush() if ( $flush || length($rs->{writeBuf}) > 65536 ); 
-    $rs->writeFlush() if ( $flush || length($rs->{writeBuf}) > 4096 ); 
+    $rs->writeFlush() if ( $flush || length($rs->{writeBuf}) > 32768 ); 
 }
 
 sub statsFinal
