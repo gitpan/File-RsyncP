@@ -40,13 +40,13 @@
 #define S33 11
 #define S34 15
 
-static void MD4Transform PROTO_LIST ((UINT4 [4], unsigned char [64]));
-void MD4Encode PROTO_LIST
+static void RsyncMD4Transform PROTO_LIST ((UINT4 [4], unsigned char [64]));
+void RsyncMD4Encode PROTO_LIST
   ((unsigned char *, UINT4 *, unsigned int));
-void MD4Decode PROTO_LIST
+void RsyncMD4Decode PROTO_LIST
   ((UINT4 *, unsigned char *, unsigned int));
-static void MD4_memcpy PROTO_LIST ((POINTER, POINTER, unsigned int));
-static void MD4_memset PROTO_LIST ((POINTER, int, unsigned int));
+static void RsyncMD4_memcpy PROTO_LIST ((POINTER, POINTER, unsigned int));
+static void RsyncMD4_memset PROTO_LIST ((POINTER, int, unsigned int));
 
 static unsigned char PADDING[64] = {
   0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -81,8 +81,8 @@ static unsigned char PADDING[64] = {
 
 /* MD4 initialization. Begins an MD4 operation, writing a new context.
  */
-void MD4Init (context)
-MD4_CTX *context;                                        /* context */
+void RsyncMD4Init (context)
+RsyncMD4_CTX *context;                                        /* context */
 {
   context->count[0] = context->count[1] = 0;
 
@@ -99,8 +99,8 @@ MD4_CTX *context;                                        /* context */
      operation, processing another message block, and updating the
      context.
  */
-void MD4Update (context, input, inputLen)
-MD4_CTX *context;                                        /* context */
+void RsyncMD4Update (context, input, inputLen)
+RsyncMD4_CTX *context;                                        /* context */
 unsigned char *input;                                /* input block */
 unsigned int inputLen;                     /* length of input block */
 {
@@ -119,12 +119,12 @@ unsigned int inputLen;                     /* length of input block */
   /* Transform as many times as possible.
    */
   if (inputLen >= partLen) {
-    MD4_memcpy
+    RsyncMD4_memcpy
       ((POINTER)&context->buffer[index], (POINTER)input, partLen);
-    MD4Transform (context->state, context->buffer);
+    RsyncMD4Transform (context->state, context->buffer);
 
     for (i = partLen; i + 63 < inputLen; i += 64)
-      MD4Transform (context->state, &input[i]);
+      RsyncMD4Transform (context->state, &input[i]);
 
     index = 0;
   }
@@ -132,7 +132,7 @@ unsigned int inputLen;                     /* length of input block */
     i = 0;
 
   /* Buffer remaining input */
-  MD4_memcpy
+  RsyncMD4_memcpy
     ((POINTER)&context->buffer[index], (POINTER)&input[i],
      inputLen-i);
 }
@@ -140,30 +140,30 @@ unsigned int inputLen;                     /* length of input block */
 /* MD4 finalization. Ends an MD4 message-digest operation, writing the
      the message digest and zeroizing the context.
  */
-void MD4Final (digest, context)
+void RsyncMD4Final (digest, context)
 unsigned char digest[16];                         /* message digest */
-MD4_CTX *context;                                        /* context */
+RsyncMD4_CTX *context;                                        /* context */
 {
   unsigned char bits[8];
   unsigned int index, padLen;
 
   /* Save number of bits */
-  MD4Encode (bits, context->count, 8);
+  RsyncMD4Encode (bits, context->count, 8);
 
   /* Pad out to 56 mod 64.
    */
   index = (unsigned int)((context->count[0] >> 3) & 0x3f);
   padLen = (index < 56) ? (56 - index) : (120 - index);
-  MD4Update (context, PADDING, padLen);
+  RsyncMD4Update (context, PADDING, padLen);
 
   /* Append length (before padding) */
-  MD4Update (context, bits, 8);
+  RsyncMD4Update (context, bits, 8);
   /* Store state in digest */
-  MD4Encode (digest, context->state, 16);
+  RsyncMD4Encode (digest, context->state, 16);
 
   /* Zeroize sensitive information.
    */
-  MD4_memset ((POINTER)context, 0, sizeof (*context));
+  RsyncMD4_memset ((POINTER)context, 0, sizeof (*context));
 
 }
 
@@ -179,9 +179,9 @@ MD4_CTX *context;                                        /* context */
  * If context->rsyncBug is clear we correctly implement md4 (rsync
  * protocol >= 27).
  */
-void MD4FinalRsync (digest, context)
+void RsyncMD4FinalRsync (digest, context)
 unsigned char digest[16];                         /* message digest */
-MD4_CTX *context;                                 /* context */
+RsyncMD4_CTX *context;                                 /* context */
 {
   unsigned char bits[8];
   unsigned int index, padLen;
@@ -190,35 +190,35 @@ MD4_CTX *context;                                 /* context */
   if ( context->rsyncBug ) {
       context->count[1] = 0;	/* Rsync <= 2.5.6 bug */
   }
-  MD4Encode (bits, context->count, 8);
+  RsyncMD4Encode (bits, context->count, 8);
 
   /* Pad out to 56 mod 64.
    */
   index = (unsigned int)((context->count[0] >> 3) & 0x3f);
   if ( !context->rsyncBug || index > 0 ) {	/* Rsync <= 2.5.6 bug */
       padLen = (index < 56) ? (56 - index) : (120 - index);
-      MD4Update (context, PADDING, padLen);
+      RsyncMD4Update (context, PADDING, padLen);
 
       /* Append length (before padding) */
-      MD4Update (context, bits, 8);
+      RsyncMD4Update (context, bits, 8);
       /* Store state in digest */
   }
-  MD4Encode (digest, context->state, 16);
+  RsyncMD4Encode (digest, context->state, 16);
 
   /* Zeroize sensitive information.
    */
-  MD4_memset ((POINTER)context, 0, sizeof (*context));
+  RsyncMD4_memset ((POINTER)context, 0, sizeof (*context));
 }
 
 /* MD4 basic transformation. Transforms state based on block.
  */
-static void MD4Transform (state, block)
+static void RsyncMD4Transform (state, block)
 UINT4 state[4];
 unsigned char block[64];
 {
   UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
 
-  MD4Decode (x, block, 64);
+  RsyncMD4Decode (x, block, 64);
 
   /* Round 1 */
   FF (a, b, c, d, x[ 0], S11); /* 1 */
@@ -281,13 +281,13 @@ unsigned char block[64];
 
   /* Zeroize sensitive information.
    */
-  MD4_memset ((POINTER)x, 0, sizeof (x));
+  RsyncMD4_memset ((POINTER)x, 0, sizeof (x));
 }
 
 /* Encodes input (UINT4) into output (unsigned char). Assumes len is
      a multiple of 4.
  */
-void MD4Encode (output, input, len)
+void RsyncMD4Encode (output, input, len)
 unsigned char *output;
 UINT4 *input;
 unsigned int len;
@@ -305,7 +305,7 @@ unsigned int len;
 /* Decodes input (unsigned char) into output (UINT4). Assumes len is
      a multiple of 4.
  */
-void MD4Decode (output, input, len)
+void RsyncMD4Decode (output, input, len)
 
 UINT4 *output;
 unsigned char *input;
@@ -320,7 +320,7 @@ unsigned int len;
 
 /* Note: Replace "for loop" with standard memcpy if possible.
  */
-static void MD4_memcpy (output, input, len)
+static void RsyncMD4_memcpy (output, input, len)
 POINTER output;
 POINTER input;
 unsigned int len;
@@ -333,7 +333,7 @@ unsigned int len;
 
 /* Note: Replace "for loop" with standard memset if possible.
  */
-static void MD4_memset (output, value, len)
+static void RsyncMD4_memset (output, value, len)
 POINTER output;
 int value;
 unsigned int len;

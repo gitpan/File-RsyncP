@@ -4,7 +4,9 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     'NAME'	      => 'File::RsyncP',
     'VERSION_FROM'    => 'lib/File/RsyncP.pm', # finds $VERSION
-    'PREREQ_PM'	      => {}, # e.g., Module::Name => 1.1
+    'PREREQ_PM'       => {
+                            Getopt::Long => 2.24,	# need OO interface
+                         },
     'PMLIBDIRS'       => ['lib'],
     'DIR'             => ['Digest', 'FileList'],
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005

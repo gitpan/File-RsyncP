@@ -67,26 +67,26 @@ void rsync_checksum(unsigned char *buf, UINT4 len, UINT4 blockSize, UINT4 seed,
     unsigned char seedBytes[4];
 
     if ( md4DigestLen > 0 && seed ) {
-	MD4Encode(seedBytes, &seed, 1);
+	RsyncMD4Encode(seedBytes, &seed, 1);
     }
     while ( len > 0 ) {
 	int thisLen = len < blockSize ? len : blockSize;
 	UINT4 adler32 = adler32_checksum((char*)buf, thisLen);
 
-	MD4Encode(digest, &adler32, 1);
+	RsyncMD4Encode(digest, &adler32, 1);
 	digest += 4;
 	if ( md4DigestLen ) {
-	    MD4_CTX md4;
-	    MD4Init(&md4);
-	    MD4Update(&md4, buf, thisLen);
+	    RsyncMD4_CTX md4;
+	    RsyncMD4Init(&md4);
+	    RsyncMD4Update(&md4, buf, thisLen);
 	    if ( seed ) {
-		MD4Update(&md4, seedBytes, 4);
+		RsyncMD4Update(&md4, seedBytes, 4);
 	    }
 	    if ( md4DigestLen < 0 ) {
 		/*
 		 * Done: just save the state and the partial buffer (no finish)
 		 */
-	        MD4Encode(digest, md4.state, 16);
+	        RsyncMD4Encode(digest, md4.state, 16);
 		digest += 16;
                 memcpy(digest, md4.buffer, thisLen % 64);
                 digest += thisLen % 64;
@@ -94,14 +94,14 @@ void rsync_checksum(unsigned char *buf, UINT4 len, UINT4 blockSize, UINT4 seed,
 		/*
 		 * Normal finish: save all 16 bytes
 		 */
-		MD4FinalRsync(digest, &md4);
+		RsyncMD4FinalRsync(digest, &md4);
 		digest += 16;
 	    } else {
 		unsigned char md4Digest[16];
 		/*
 		 * Finish and truncate to md4DigestLen bytes
 		 */
-		MD4FinalRsync(md4Digest, &md4);
+		RsyncMD4FinalRsync(md4Digest, &md4);
 		memcpy(digest, md4Digest, md4DigestLen);
 		digest += md4DigestLen;
 	    }
@@ -134,21 +134,21 @@ void rsync_checksum_update(unsigned char *digestIn, UINT4 blockCnt,
     unsigned char seedBytes[4];
 
     if ( seed ) {
-	MD4Encode(seedBytes, &seed, 1);
+	RsyncMD4Encode(seedBytes, &seed, 1);
     }
     if ( md4DigestLen > 16 || md4DigestLen < 0 ) {
 	md4DigestLen = 16;
     }
     while ( blockCnt-- ) {
-        MD4_CTX md4;
+        RsyncMD4_CTX md4;
 	/*
 	 * Copy adler32
 	 */
 	memcpy(digestOut, digestIn, 4);
 	digestIn  += 4;
 	digestOut += 4;
-        MD4Init(&md4);
-        MD4Decode(md4.state, digestIn, 16);
+        RsyncMD4Init(&md4);
+        RsyncMD4Decode(md4.state, digestIn, 16);
         digestIn  += 16;
         if ( blockCnt ) {
             md4.count[0] = blockSize << 3;
@@ -162,19 +162,19 @@ void rsync_checksum_update(unsigned char *digestIn, UINT4 blockCnt,
             digestIn += blockLastLen % 64;
         }
         if ( seed ) {
-            MD4Update(&md4, seedBytes, 4);
+            RsyncMD4Update(&md4, seedBytes, 4);
         }
         if ( md4DigestLen == 16 ) {
             /*
              * Normal finish: save all 16 bytes
              */
-            MD4FinalRsync(digestOut, &md4);
+            RsyncMD4FinalRsync(digestOut, &md4);
         } else {
             unsigned char md4Digest[16];
             /*
              * Finish and truncate to md4DigestLen bytes
              */
-            MD4FinalRsync(md4Digest, &md4);
+            RsyncMD4FinalRsync(md4Digest, &md4);
             memcpy(digestOut, md4Digest, md4DigestLen);
         }
         digestOut += md4DigestLen;

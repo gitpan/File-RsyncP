@@ -425,6 +425,7 @@ void receive_file_entry(struct file_list *f, struct file_struct **fptr,
     char lastname[MAXPATHLEN];
     unsigned int l1 = 0, l2 = 0;
     char *p;
+    char *lastdir = NULL;
     struct file_struct file, *filePtr;
 
     memset((char *) &file, 0, sizeof(file));
@@ -465,7 +466,7 @@ void receive_file_entry(struct file_list *f, struct file_struct **fptr,
             file.dirnameAlloc = 0;
         } else {
             file.dirname = strdup(thisname);
-            f->lastdir = file.dirname;
+            lastdir = file.dirname;
             file.dirnameAlloc = 1;
         }
         file.basename = strdup(p + 1);
@@ -541,6 +542,8 @@ void receive_file_entry(struct file_list *f, struct file_struct **fptr,
 
     strlcpy(f->lastname, lastname, MAXPATHLEN);
     f->lastname[MAXPATHLEN - 1] = 0;
+    if ( lastdir )
+	f->lastdir = lastdir;
     f->last_mode = file.mode;
     f->last_rdev = file.rdev;
     f->last_uid  = file.uid;

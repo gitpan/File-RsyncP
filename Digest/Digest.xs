@@ -24,7 +24,7 @@ extern "C" {
 #include "global.h"
 #include "md4.h"
 
-typedef MD4_CTX	*File__RsyncP__Digest;
+typedef RsyncMD4_CTX	*File__RsyncP__Digest;
 
 #ifdef __cplusplus
 }
@@ -40,8 +40,8 @@ new(packname = "File::RsyncP::Digest")
 	char *		packname
     CODE:
 	{
-	    RETVAL = (MD4_CTX *)safemalloc(sizeof(MD4_CTX));
-	    MD4Init(RETVAL);
+	    RETVAL = (RsyncMD4_CTX *)safemalloc(sizeof(RsyncMD4_CTX));
+	    RsyncMD4Init(RETVAL);
 	}
     OUTPUT:
 	RETVAL
@@ -60,7 +60,7 @@ reset(context)
 	File::RsyncP::Digest	context
     CODE:
 	{
-	    MD4Init(context);
+	    RsyncMD4Init(context);
 	    RETVAL = context;
 	}
 
@@ -91,7 +91,7 @@ add(context, ...)
 	    for (i = 1; i < items; i++)
 	    {
 		data = (unsigned char *)(SvPV(ST(i), len));
-		MD4Update(context, data, len);
+		RsyncMD4Update(context, data, len);
 	    }
 	    RETVAL = context;
 	}
@@ -103,7 +103,7 @@ digest(context)
 	{
 	    unsigned char digeststr[16];
 
-	    MD4FinalRsync(digeststr, context);
+	    RsyncMD4FinalRsync(digeststr, context);
 	    ST(0) = sv_2mortal(newSVpv((char *)digeststr, 16));
 	}
 
@@ -113,16 +113,16 @@ digest2(context)
     CODE:
 	{
 	    unsigned char digeststr[32];
-	    MD4_CTX context2 = *context;
+	    RsyncMD4_CTX context2 = *context;
 
 	    /*
 	     * Return 2 MD4s (32 bytes): first is rsync buggy version
 	     * (protocol <= 26) and second is correct version (>= 27).
 	     */
 	    context2.rsyncBug = !context->rsyncBug;
-	    MD4FinalRsync(digeststr + 0,
+	    RsyncMD4FinalRsync(digeststr + 0,
 			context->rsyncBug ? context : &context2);
-	    MD4FinalRsync(digeststr + 16,
+	    RsyncMD4FinalRsync(digeststr + 16,
 			context->rsyncBug ? &context2 : context);
 	    ST(0) = sv_2mortal(newSVpv((char *)digeststr, 32));
 	}
@@ -169,8 +169,7 @@ blockDigest(context, dataV, blockSize=700, md4DigestLen=16, seed=0)
 	}
 
 SV *
-blockDigestUpdate(context, dataV, blockSize=700, blockLastLen=0, \
-		    md4DigestLen=16, seed=0)
+blockDigestUpdate(context, dataV, blockSize=700, blockLastLen=0, md4DigestLen=16, seed=0)
     PREINIT:
 	STRLEN len;
     INPUT:

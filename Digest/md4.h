@@ -36,14 +36,14 @@ typedef struct {
    * for >= 512MB.  Both bugs are fixed for protocol version >= 27.
    */
   unsigned char rsyncBug;
-} MD4_CTX;
+} RsyncMD4_CTX;
 
-void MD4Init PROTO_LIST ((MD4_CTX *));
-void MD4Update PROTO_LIST
-  ((MD4_CTX *, unsigned char *, unsigned int));
-void MD4Final PROTO_LIST ((unsigned char [16], MD4_CTX *));
-void MD4Encode PROTO_LIST
+void RsyncMD4Init PROTO_LIST ((RsyncMD4_CTX *));
+void RsyncMD4Update PROTO_LIST
+  ((RsyncMD4_CTX *, unsigned char *, unsigned int));
+void RsyncMD4Final PROTO_LIST ((unsigned char [16], RsyncMD4_CTX *));
+void RsyncMD4Encode PROTO_LIST
   ((unsigned char *, UINT4 *, unsigned int));
-void MD4FinalRsync PROTO_LIST ((unsigned char [16], MD4_CTX *));
-void MD4Decode PROTO_LIST
+void RsyncMD4FinalRsync PROTO_LIST ((unsigned char [16], RsyncMD4_CTX *));
+void RsyncMD4Decode PROTO_LIST
   ((UINT4 *, unsigned char *, unsigned int));

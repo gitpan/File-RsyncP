@@ -1,5 +1,9 @@
 Revision history for Perl module File::RsyncP::Digest
 
+0.45 Sat Feb  7 15:37:51 PST 2004
+
+  - Patches from Lars Thegler to back port to perl 5.005_03.
+
 0.44 Wed Jul 23 21:31:18 PDT 2003
 
   - No changes.

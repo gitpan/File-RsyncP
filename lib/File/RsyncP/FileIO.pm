@@ -30,7 +30,7 @@
 #
 #========================================================================
 #
-# Version 0.44, released 23 Jul 2003.
+# Version 0.45, released 7 Feb 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -44,7 +44,7 @@ use File::Path;
 use File::Find;
 use Data::Dumper;
 
-our $VERSION = '0.44';
+use vars qw($VERSION); $VERSION = '0.45';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -664,7 +664,7 @@ sub log
 
     foreach my $str ( @logStr ) {
         next if ( $str eq "" );
-        $fio->{logHandler}($str);
+        $fio->{logHandler}->($str);
     }
 }
 

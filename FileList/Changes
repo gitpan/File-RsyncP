@@ -1,5 +1,14 @@
 Revision history for Perl module File::RsyncP::FileList.
 
+0.45 Sat Feb  7 15:37:51 PST 2004
+
+  - Patch from Marlin Prowell for FileList/flist.c that solves a
+    subtle file list corruption problem.  In particular, f->lastdir
+    was being set too early in receive_file_entry(), potentially
+    before it returned to fetch more data and restart.
+
+  - Patches from Lars Thegler to back port to perl 5.005_03.
+
 0.44 Wed Jul 23 21:31:18 PDT 2003
 
   - Fixes to FileList for large file support.

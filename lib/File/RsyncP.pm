@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.44, released 23 Jul 2003.
+# Version 0.45, released 7 Feb 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -48,7 +48,7 @@ use File::RsyncP::FileList;
 use Getopt::Long;
 use Data::Dumper;
 
-our $VERSION = '0.44';
+use vars qw($VERSION); $VERSION = '0.45';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -267,7 +267,7 @@ sub remoteStart
     close(RSYNC);
     $rs->{fh} = *FH;
     $rs->{rsyncPID} = $pid;
-    $rs->{pidHandler}($rs->{rsyncPID}, $rs->{childPID})
+    $rs->{pidHandler}->($rs->{rsyncPID}, $rs->{childPID})
 			if ( defined($rs->{pidHandler}) );
     #
     # Write our version and get the remote version
@@ -391,7 +391,7 @@ sub go
 	$rs->{childFh}  = *RH;
 	$rs->{childPID} = $pid;
 	$rs->log("Child PID is $pid") if ( $rs->{logLevel} >= 2 );
-	$rs->{pidHandler}($rs->{rsyncPID}, $rs->{childPID})
+	$rs->{pidHandler}->($rs->{rsyncPID}, $rs->{childPID})
 			    if ( defined($rs->{pidHandler}) );
 	setsockopt($rs->{fh}, SOL_SOCKET, SO_SNDBUF, 8 * 65536);
 	setsockopt($rs->{childFh}, SOL_SOCKET, SO_RCVBUF, 8 * 65536);
@@ -1088,7 +1088,7 @@ sub log
 
     foreach my $str ( @logStr ) {
 	next if ( $str eq "" );
-	$rs->{logHandler}($str);
+	$rs->{logHandler}->($str);
     }
 }
 
