@@ -1,0 +1,13 @@
+Revision history for Perl module File::RsyncP::FileList.
+
+0.30 Sun Feb  9 23:06:42 PST 2003
+
+  - no changes.
+
+0.20 Fri Jan 17 22:21:54 PST 2003
+
+  - changed fname argument to encode() to name.
+
+0.10 Fri Dec 20 17:25:21 PST 2002
+
+  - Initial version

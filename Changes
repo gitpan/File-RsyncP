@@ -1,0 +1,40 @@
+Revision history for Perl module File::RsyncP.
+
+0.30 Sun Feb  9 23:06:42 PST 2003
+
+  - Added timeout parameter to File::RsyncP->new.
+
+  - Fixed File::RsyncP::FileIO to handle a received file whose
+    size changed from the file list.
+
+0.20 Fri Jan 17 22:24:11 PST 2003
+
+  - Added rsyncCmdType argument to File::RsyncP->new.
+
+  - Allowed rsyncCmd to be a code reference.
+
+  - Added logHandler to File::RsyncP::FileIO->new, allowing a callback
+    style log function rather than logMsg.
+
+  - Added logHandlerSet to File::RsyncP::FileIO.
+
+  - Added optional needMD4 argument to File::RsyncP::FileIO->csumStart.
+
+  - Renamed sub mkpath to makePath.
+
+  - Renamed sub mkspecial to makeSpecial.
+
+  - Replaced unlink() calls with CORE::unlink().
+
+  - Added handling of special files to File::RsyncP::FileIO->fileListEltSend
+
+  - Added File::RsyncP::FileIO->ignoreAttrOnFile.
+
+  - Sending file deltas now sends deltas if the files are identical,
+    rather than the whole file.
+
+  - Changed t/rsyncLoad.t to use File::RsyncP instead of File::RsyncP::Digest.
+
+0.10 Wed Dec 25 17:25:21 PST 2002
+
+  - Initial version
