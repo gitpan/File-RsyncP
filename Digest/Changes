@@ -1,5 +1,10 @@
 Revision history for Perl module File::RsyncP::Digest
 
+0.51 Sun May  9 23:42:56 PDT 2004
+
+  - Changed newSVpv() to newSVpvn() in Digest/Digest.xs to allow
+    empty argument to blockDigestExtract().
+
 0.50 Sat Mar 20 18:19:50 PST 2004
 
   - No changes.

@@ -104,7 +104,7 @@ digest(context)
 	    unsigned char digeststr[16];
 
 	    RsyncMD4FinalRsync(digeststr, context);
-	    ST(0) = sv_2mortal(newSVpv((char *)digeststr, 16));
+	    ST(0) = sv_2mortal(newSVpvn((char *)digeststr, 16));
 	}
 
 SV *
@@ -124,7 +124,7 @@ digest2(context)
 			context->rsyncBug ? context : &context2);
 	    RsyncMD4FinalRsync(digeststr + 16,
 			context->rsyncBug ? &context2 : context);
-	    ST(0) = sv_2mortal(newSVpv((char *)digeststr, 32));
+	    ST(0) = sv_2mortal(newSVpvn((char *)digeststr, 32));
 	}
 
 SV *
@@ -164,7 +164,7 @@ blockDigest(context, dataV, blockSize=700, md4DigestLen=16, seed=0)
             }
 	    digest = safemalloc(1 + digestSize);
 	    rsync_checksum(data, len, blockSize, seed, digest, md4DigestLen);
-	    ST(0) = sv_2mortal(newSVpv((char *)digest, digestSize));
+	    ST(0) = sv_2mortal(newSVpvn((char *)digest, digestSize));
 	    safefree(digest);
 	}
 
@@ -208,7 +208,7 @@ blockDigestUpdate(context, dataV, blockSize=700, blockLastLen=0, md4DigestLen=16
 	    digest = safemalloc(1 + digestSize);
 	    rsync_checksum_update(data, blockCnt, blockSize, 
 		    blockLastLen, seed, digest, md4DigestLen);
-	    ST(0) = sv_2mortal(newSVpv((char *)digest, digestSize));
+	    ST(0) = sv_2mortal(newSVpvn((char *)digest, digestSize));
 	    safefree(digest);
 	}
 
@@ -240,6 +240,6 @@ blockDigestExtract(context, dataV, md4DigestLen=16)
                 p += md4DigestLen;
                 data += 16;
             }
-	    ST(0) = sv_2mortal(newSVpv((char *)digest, digestSize));
+	    ST(0) = sv_2mortal(newSVpvn((char *)digest, digestSize));
 	    safefree(digest);
 	}

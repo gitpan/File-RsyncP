@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.50, released 20 Mar 2004.
+# Version 0.51, released 16 May 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -50,7 +50,7 @@ use Data::Dumper;
 use Config;
 
 use vars qw($VERSION);
-$VERSION = '0.50';
+$VERSION = '0.51';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -655,8 +655,8 @@ sub fileCsumSend
                             0,
                             $rs->{blockSize},
                             0), 1);
-            } elsif ( ($blkSize = $rs->{fio}->csumStart($f, 0,
-                                                  $rs->{blockSize})) < 0 ) {
+            } elsif ( ($blkSize = $rs->{fio}->csumStart($f, 0, $rs->{blockSize},
+                                                        $phase)) < 0 ) {
 		#
 		# Can't open the file, so send an empty checksum
 		#
@@ -851,7 +851,7 @@ sub fileCsumReceive
 	# generation...
         # 
         next if ( ($f->{mode} & S_IFMT) != S_IFREG );
-        $rs->{fio}->csumStart($f, 1);
+        $rs->{fio}->csumStart($f, 1, $blkSize, $phase);
         my $attr = $rs->{fio}->attribGet($f);
         my $fileSame = $attr->{size} == ($blkCnt > 0
 				        ? ($blkCnt - 1) * $blkSize + $remainder
@@ -950,7 +950,7 @@ sub fileDeltaGet
                 my $md4digest = unpack("a16", $rs->{chunkData});
 		$rs->{chunkData} = substr($rs->{chunkData}, 16);
                 my $ret = $rs->{fio}->fileDeltaRxNext(undef, undef)
-                       || $rs->{fio}->fileDeltaRxDone($md4digest);
+                       || $rs->{fio}->fileDeltaRxDone($md4digest, $phase);
                 if ( $ret == 1 ) {
                     if ( $phase == 1 ) {
                         $rs->log("MD4 does't agree: fatal error on #$fileNum ($f->{name})");
