@@ -1,5 +1,12 @@
 Revision history for Perl module File::RsyncP::FileList.
 
+0.47 Sun Mar 14 21:37:22 PST 2004
+
+  - Changed FileList/FileList.xs so that uid, gid, mode and mtime
+    are forced to be unsigned.  This fixes a problem new to 0.46 that
+    was introduced when newSVuv was replaced with newSVnv to back
+    port to 5.005_03.
+
 0.46 Sun Feb  8 18:11:30 PST 2004
 
   - No changes.

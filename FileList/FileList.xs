@@ -188,10 +188,11 @@ get(flist, index)
         if ( file->sum )
             hv_store(rh, "sum",      3, newSVpv(file->sum, 0), 0);
         hv_store(rh, "name",    4, newSVpv(f_name(file), 0), 0);
-        hv_store(rh, "uid",     3, newSVnv((double)file->uid), 0);
-        hv_store(rh, "gid",     3, newSVnv((double)file->gid), 0);
-        hv_store(rh, "mode",    4, newSVnv((double)file->mode), 0);
-        hv_store(rh, "mtime",   5, newSVnv((double)file->modtime), 0);
+        hv_store(rh, "uid",     3, newSVnv((double)((unsigned)file->uid)), 0);
+        hv_store(rh, "gid",     3, newSVnv((double)((unsigned)file->gid)), 0);
+        hv_store(rh, "mode",    4, newSVnv((double)((unsigned)file->mode)), 0);
+        hv_store(rh, "mtime",   5,
+			    newSVnv((double)((unsigned)file->modtime)), 0);
         hv_store(rh, "size",    4, newSVnv(file->length), 0);
         hv_store(rh, "dev",     3, newSVnv(file->dev), 0);
         hv_store(rh, "inode",   5, newSVnv(file->inode), 0);
