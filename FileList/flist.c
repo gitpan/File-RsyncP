@@ -390,14 +390,14 @@ double read_longint(struct file_list *f)
 {
     char b[8];
     int32 ret = read_int(f);
+    double d;
 
     if (ret != (int32)0xffffffff) {
         return ret;
     }
-    readfd(f,b,8);
-    ret = read_int(f);
-    ret += read_int(f) * 65536.0 * 65536.0;
-    return ret;
+    d  = (uint32)read_int(f);
+    d += ((uint32)read_int(f)) * 65536.0 * 65536.0;
+    return d;
 }
 
 void read_buf(struct file_list *f,char *buf,size_t len)
@@ -586,8 +586,8 @@ static void write_longint(struct file_list *f, double x)
         return;
     }
     write_int(f, (int32)0xFFFFFFFF);
-    write_int(f, (int32)(fmod(x, 65536.0 * 65536.0)));
-    write_int(f, (int32)(x / (65536.0 * 65536.0)));
+    write_int(f, (uint32)(fmod(x, 65536.0 * 65536.0)));
+    write_int(f, (uint32)(x / (65536.0 * 65536.0)));
 }
 
 static void write_buf(struct file_list *f,char *buf,size_t len)

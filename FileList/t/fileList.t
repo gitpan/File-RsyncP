@@ -72,12 +72,23 @@ my @TestFiles = (
         size  => 65432,
         mtime => time + 1,
     },
+    {
+        name  => "xxx/zzz/bbb6",
+        dev   => (1 << 31) * 123 + (5432 << 18),
+        inode => (1 << 31) * 12  + (6543 << 17),,
+        mode  => 0100666,
+        uid   => 9876,
+        gid   => 6543,
+        rdev  => 0x12345,
+        size  => (1 << 31) * 3 + (1 << 29), 
+        mtime => time + 1,
+    },
 );
 
 for ( my $i = 0 ; $i < @TestFiles ; $i++ ) {
     $fList->encode($TestFiles[$i]);
 }
-if ( $fList->count == 5 ) {
+if ( $fList->count == 6 ) {
     print("ok 2\n");
 } else {
     print("not ok 2\n");
@@ -100,6 +111,7 @@ if ( $ok ) {
 }
 
 my $data = $fList->encodeData . pack("C", 0);
+#print("data = ", unpack("H*", $data), "\n");
 my $fList2 = File::RsyncP::FileList->new({
                 preserve_uid        => 1,       # --owner
                 preserve_gid        => 1,       # --group

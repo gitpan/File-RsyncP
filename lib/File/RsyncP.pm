@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.43, released 19 Jul 2003.
+# Version 0.44, released 23 Jul 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -48,7 +48,7 @@ use File::RsyncP::FileList;
 use Getopt::Long;
 use Data::Dumper;
 
-our $VERSION = '0.43';
+our $VERSION = '0.44';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory

@@ -70,6 +70,24 @@ static int getHashString(SV *opts, char *param, char *def,
     return 0;
 }
 
+/*
+ * Pick a double setting out of the hash ref opts.  If the argument
+ * isn't a hash, or doesn't contain param, then returns def.
+ */
+static double getHashDouble(SV *opts, char *param, double def)
+{
+    SV **vp;
+
+    if ( !opts || !SvROK(opts)
+               || SvTYPE(SvRV(opts)) != SVt_PVHV
+               || !(vp = hv_fetch((HV*)SvRV(opts), param, strlen(param), 0))
+               || !*vp ) {
+        return def;
+    }
+    return SvNV(*vp);
+}
+
+
 MODULE = File::RsyncP::FileList		PACKAGE = File::RsyncP::FileList		
 
 PROTOTYPES: DISABLE
@@ -230,12 +248,12 @@ encode(flist, SV* data)
 	}
 
 	file.modtime = getHashUInt(data, "mtime", 0);
-	file.length  = getHashUInt(data, "size", 0);
+	file.length  = getHashDouble(data, "size", 0.0);
 	file.mode    = getHashUInt(data, "mode", 0);
 	file.uid     = getHashUInt(data, "uid", 0);
 	file.gid     = getHashUInt(data, "gid", 0);
-	file.dev     = getHashUInt(data, "dev", 0);
-	file.inode   = getHashUInt(data, "inode", 0);
+	file.dev     = getHashDouble(data, "dev", 0.0);
+	file.inode   = getHashDouble(data, "inode", 0.0);
 	file.rdev    = getHashUInt(data, "rdev", 0);
 	if ( gotLink ) {
             file.link = strdup(linkbuf);

@@ -1,5 +1,9 @@
 Revision history for Perl module File::RsyncP.
 
+0.44 Wed Jul 23 21:31:18 PDT 2003
+
+  - Fixes to FileList for large file support.
+
 0.43 Sun Jul 20 00:03:40 PDT 2003
 
   - Changed file length, dev and inode to double.
