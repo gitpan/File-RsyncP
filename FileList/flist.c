@@ -63,14 +63,6 @@ extern int sanitize_paths;
 extern int read_batch;
 extern int write_batch;
 
-
-/* used by the one_file_system code */
-static dev_t filesystem_dev;
-
-static char topsrcname[MAXPATHLEN];
-
-static struct exclude_struct **local_exclude_list;
-
 static struct file_struct null_file;
 
 static int to_wire_mode(mode_t mode)
@@ -97,8 +89,6 @@ static int flist_up(struct file_list *flist, int i)
 	while (!flist->files[i]->basename) i++;
 	return i;
 }
-
-static char *flist_dir;
 
 /**
  * Make sure @p flist is big enough to hold at least @p flist->count
@@ -376,9 +366,6 @@ void clean_fname(char *name)
 
 static void readfd(struct file_list *f, unsigned char *buffer, size_t N)
 {
-    int  ret;
-    size_t total=0;  
-    
     if ( f->inError || f->inPosn + N > f->inLen ) {
         memset(buffer, 0, N);
         f->inError = 1;
@@ -401,7 +388,6 @@ int32 read_int(struct file_list *f)
 
 double read_longint(struct file_list *f)
 {
-    double retd;
     char b[8];
     int32 ret = read_int(f);
 
@@ -723,7 +709,6 @@ void send_file_entry(struct file_list *f, struct file_struct *file)
 int flistDecodeBytes(struct file_list *f, unsigned char *bytes, uint32 nBytes)
 {
     unsigned char flags;
-    struct file_list fSave;
 
     f->inBuf = bytes;
     f->inLen = nBytes;

@@ -36,3 +36,6 @@ void MD4Update PROTO_LIST
 void MD4Final PROTO_LIST ((unsigned char [16], MD4_CTX *));
 void MD4Encode PROTO_LIST
   ((unsigned char *, UINT4 *, unsigned int));
+void MD4FinalRsync PROTO_LIST ((unsigned char [16], MD4_CTX *));
+void MD4Decode PROTO_LIST
+  ((UINT4 *, unsigned char *, unsigned int));

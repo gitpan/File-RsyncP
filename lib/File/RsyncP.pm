@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.41, released 10 May 2003.
+# Version 0.42, released 13 Jul 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -48,7 +48,7 @@ use File::RsyncP::FileList;
 use Getopt::Long;
 use Data::Dumper;
 
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -440,7 +440,7 @@ sub go
 	#
 	# Get final int handshake, and wait for EOF
 	#
-	$rs->getChunk(4);
+	$rs->getData(4);
         sysread($rs->{fh}, my $data, 1);
 
         return;
@@ -693,9 +693,16 @@ sub pollChild
     #
     # Process any complete lines of output from the child.
     #
-    while ( $rs->{childMesg} =~ /(.*?)[\n\r]+(.*)/s ) {
-	$mesg = $1;
-	$rs->{childMesg} = $2;
+    # Because some regexps are very slow in 5.8.0, this old code:
+    #
+    #    while ( $rs->{childMesg} =~ /(.*?)[\n\r]+(.*)/s ) {
+    #        $mesg = $1;
+    #        $rs->{childMesg} = $2;
+    #
+    # was replaced with the split() below.
+    #
+    while ( $rs->{childMesg} =~ /[\n\r]/ ) {
+	($mesg, $rs->{childMesg}) = split(/[\n\r]+/, $rs->{childMesg}, 2);
 	$rs->log("Parent read: $mesg")
 		    if ( $rs->{logLevel} >= 20 );
 	if ( $mesg =~ /^done$/ ) {

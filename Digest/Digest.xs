@@ -69,7 +69,6 @@ add(context, ...)
 	File::RsyncP::Digest	context
     CODE:
 	{
-	    SV *svdata;
 	    STRLEN len;
 	    unsigned char *data;
 	    int i;
@@ -108,7 +107,7 @@ blockDigest(context, dataV, blockSize=700, md4DigestLen=16, seed=0)
 	{
 	    UINT4 digestSize;
 	    unsigned char *digest;
-	    extern rsync_checksum(unsigned char *buf, UINT4 len,
+	    extern void rsync_checksum(unsigned char *buf, UINT4 len,
 		    UINT4 blockSize, UINT4 seed, unsigned char *digest,
 		    int md4DigestLen);
 

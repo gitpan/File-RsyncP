@@ -446,27 +446,13 @@ struct stats {
 size_t strlcpy(char *d, const char *s, size_t bufsize);
 #endif
 
-#ifndef HAVE_STRLCAT
-size_t strlcat(char *d, const char *s, size_t bufsize);
-#endif
-
 #ifndef WEXITSTATUS
 #define	WEXITSTATUS(stat)	((int)(((stat)>>8)&0xFF))
 #endif
 
 #define exit_cleanup(code) _exit_cleanup(code, __FILE__, __LINE__)
 
-
 extern int verbose;
-
-#ifndef HAVE_INET_NTOP
-const char *                 
-inet_ntop(int af, const void *src, char *dst, size_t size);
-#endif /* !HAVE_INET_NTOP */
-
-#ifndef HAVE_INET_PTON
-int isc_net_pton(int af, const char *src, void *dst);
-#endif
 
 #define UNUSED(x) x __attribute__((__unused__))
 
@@ -480,3 +466,5 @@ extern int flistDecodeBytes(struct file_list *f,
 extern void clean_flist(struct file_list *flist, int strip_root);
 extern void send_file_entry(struct file_list *f, struct file_struct *file);
 extern char *f_name(struct file_struct *f);
+extern void flist_expand(struct file_list *flist);
+extern void clean_fname(char *name);
