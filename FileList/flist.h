@@ -317,15 +317,6 @@ struct stats {
 };
 
 
-/* we need this function because of the silly way in which duplicate
-   entries are handled in the file lists - we can't change this
-   without breaking existing versions */
-static inline int flist_up(struct file_list *flist, int i)
-{
-	while (!flist->files[i]->basename) i++;
-	return i;
-}
-
 #define SUPPORT_LINKS HAVE_READLINK
 #define SUPPORT_HARD_LINKS HAVE_LINK
 

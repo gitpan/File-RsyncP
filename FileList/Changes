@@ -1,5 +1,9 @@
 Revision history for Perl module File::RsyncP::FileList.
 
+0.41 Sat May 10 20:39:33 PDT 2003
+
+  - Removed inline function in flist.h
+
 0.40 Sat May 10 11:51:58 PDT 2003
 
   - No changes.

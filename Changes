@@ -1,5 +1,11 @@
 Revision history for Perl module File::RsyncP.
 
+0.41 Sat May 10 20:39:33 PDT 2003
+
+  - Fixed VERSION settings
+
+  - Removed inline function in flist.h
+
 0.40 Sat May 10 11:51:58 PDT 2003
 
   - add pidHandler() callback to caller knows the children's pids.

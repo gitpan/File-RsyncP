@@ -89,6 +89,14 @@ static mode_t from_wire_mode(int mode)
     return (mode_t) mode;
 }
 
+/* we need this function because of the silly way in which duplicate
+   entries are handled in the file lists - we can't change this
+   without breaking existing versions */
+static int flist_up(struct file_list *flist, int i)
+{
+	while (!flist->files[i]->basename) i++;
+	return i;
+}
 
 static char *flist_dir;
 
