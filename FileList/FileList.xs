@@ -60,7 +60,7 @@ static int getHashString(SV *opts, char *param, char *def,
         strcpy(result, def);
         return 0;
     } else {
-        str = SvPV(*vp, len);
+        str = (char*)SvPV(*vp, len);
         if ( len >= maxLen ) {
             return -1;
         }
@@ -137,7 +137,7 @@ decode(flist, bytesSV)
     INPUT:
 	File::RsyncP::FileList	flist
 	SV *bytesSV
-	unsigned char *bytes = SvPV(bytesSV, nBytes);
+	unsigned char *bytes = (unsigned char *)SvPV(bytesSV, nBytes);
     CODE:
     {
         RETVAL = flistDecodeBytes(flist, bytes, nBytes);
@@ -267,7 +267,7 @@ encodeData(flist)
         if ( !flist->outBuf || flist->outPosn == 0 ) {
             ST(0) = sv_2mortal(newSVpv("", 0));
         } else {
-            ST(0) = sv_2mortal(newSVpv(flist->outBuf, flist->outPosn));
+            ST(0) = sv_2mortal(newSVpv((char*)flist->outBuf, flist->outPosn));
             flist->outPosn = 0;
         }
     }

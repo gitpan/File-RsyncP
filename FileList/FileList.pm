@@ -31,7 +31,7 @@
 #
 #========================================================================
 #
-# Version 0.31, released 23 Feb 2003.
+# Version 0.40, released 10 May 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #

@@ -100,7 +100,7 @@ blockDigest(context, dataV, blockSize=700, md4DigestLen=16, seed=0)
     INPUT:
 	File::RsyncP::Digest	context
 	SV *dataV
-	unsigned char *data = SvPV(dataV, len);
+	unsigned char *data = (unsigned char *)SvPV(dataV, len);
 	size_t blockSize
 	int md4DigestLen
 	unsigned int seed
@@ -108,8 +108,9 @@ blockDigest(context, dataV, blockSize=700, md4DigestLen=16, seed=0)
 	{
 	    UINT4 digestSize;
 	    unsigned char *digest;
-	    extern rsync_checksum(char *buf, UINT4 len, UINT4 blockSize,
-		    UINT4 seed, unsigned char *digest, int md4DigestLen);
+	    extern rsync_checksum(unsigned char *buf, UINT4 len,
+		    UINT4 blockSize, UINT4 seed, unsigned char *digest,
+		    int md4DigestLen);
 
 	    if ( blockSize == 0 ) blockSize = 700;
             if ( md4DigestLen < 0 ) {
@@ -141,7 +142,7 @@ blockDigestUpdate(context, dataV, blockSize=700, blockLastLen=0, \
     INPUT:
 	File::RsyncP::Digest	context
 	SV *dataV
-	unsigned char *data = SvPV(dataV, len);
+	unsigned char *data = (unsigned char *)SvPV(dataV, len);
 	size_t blockSize
 	size_t blockLastLen
 	int md4DigestLen
@@ -150,8 +151,8 @@ blockDigestUpdate(context, dataV, blockSize=700, blockLastLen=0, \
 	{
 	    UINT4 digestSize, blockCnt;
 	    unsigned char *digest;
-	    extern void rsync_checksum_update(char *digestIn, UINT4 blockCnt,
-	        UINT4 blockSize, UINT4 blockLastLen,
+	    extern void rsync_checksum_update(unsigned char *digestIn,
+		UINT4 blockCnt, UINT4 blockSize, UINT4 blockLastLen,
 		UINT4 seed, unsigned char *digestOut, int md4DigestLen);
 
 	    if ( blockSize == 0 ) blockSize = 700;
@@ -185,7 +186,7 @@ blockDigestExtract(context, dataV, md4DigestLen=16)
     INPUT:
 	File::RsyncP::Digest	context
 	SV *dataV
-	unsigned char *data = SvPV(dataV, len);
+	unsigned char *data = (unsigned char *)SvPV(dataV, len);
 	int md4DigestLen
     CODE:
 	{

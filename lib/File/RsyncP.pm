@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.31, released 23 Feb 2003.
+# Version 0.40, released 10 May 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -266,10 +266,14 @@ sub remoteStart
     }
     close(RSYNC);
     $rs->{fh} = *FH;
+    $rs->{rsyncPID} = $pid;
+    $rs->{pidHandler}($rs->{rsyncPID}, $rs->{childPID})
+			if ( defined($rs->{pidHandler}) );
     #
     # Write our version and get the remote version
     #
     $rs->writeData(pack("V", $rs->{protocol_version}), 1);
+    $rs->log("Rsync command pid is $pid") if ( $rs->{logLevel} >= 3 );
     $rs->log("Fetching remote protocol") if ( $rs->{logLevel} >= 5 );
     return -1 if ( $rs->getData(4) < 0 );
     my $data = $rs->{readData};
@@ -384,7 +388,11 @@ sub go
         close(WH);
         close(FHRd);
         $rs->{fh} = *FHWr;
-	$rs->{childFh} = *RH;
+	$rs->{childFh}  = *RH;
+	$rs->{childPID} = $pid;
+	$rs->log("Child PID is $pid") if ( $rs->{logLevel} >= 2 );
+	$rs->{pidHandler}($rs->{rsyncPID}, $rs->{childPID})
+			    if ( defined($rs->{pidHandler}) );
 	setsockopt($rs->{fh}, SOL_SOCKET, SO_SNDBUF, 8 * 65536);
 	setsockopt($rs->{childFh}, SOL_SOCKET, SO_RCVBUF, 8 * 65536);
         #
@@ -952,7 +960,10 @@ sub getData
     while ( length($rs->{readData}) < $len ) {
         sysread($rs->{fh}, $data, 65536);
         if ( length($data) == 0 ) {
-            $rs->log("Read EOF") if ( $rs->{logLevel} >= 1 );
+            $rs->log("Read EOF: $!") if ( $rs->{logLevel} >= 1 );
+	    sysread($rs->{fh}, $data, 65536);
+            $rs->log(sprintf("Tried again: got %d bytes", length($data)))
+			if ( $rs->{logLevel} >= 1 );
             $rs->{fatalError} = 1;
             $rs->{fatalErrorMsg} = "Unable to read $len bytes";
             return -1;
@@ -1273,6 +1284,15 @@ What we advertize our protocol version to be.  Default is 26.
 A subroutine reference to a function that handles all the log 
 messages.  The default is a subroutine that prints the messages
 to STDERR.
+
+=item pidHandler
+
+An optional subroutine reference to a function that expects two
+integers: the pid of the rsync process (ie: the pid on the local
+machine that is likely ssh) and the child pid when we are receiving
+files.  If defined, this function is called once when the rsync
+process is forked, and again when the child is forked during
+receive.
 
 =item fio
 

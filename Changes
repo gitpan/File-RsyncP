@@ -1,5 +1,11 @@
 Revision history for Perl module File::RsyncP.
 
+0.40 Sat May 10 11:51:58 PDT 2003
+
+  - add pidHandler() callback to caller knows the children's pids.
+
+  - replaced seek() with sysseek() in File::RsyncP::FileIO.
+
 0.31 Sun Feb 23 15:17:05 PST 2003
 
   - Added new stat remoteErrCnt, which counts the number of error

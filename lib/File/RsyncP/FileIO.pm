@@ -30,7 +30,7 @@
 #
 #========================================================================
 #
-# Version 0.31, released 23 Feb 2003.
+# Version 0.40, released 10 May 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -453,7 +453,7 @@ sub fileDeltaRxNext
                   . "$lastBlk")
                         if ( $fio->{logLevel} >= 10 );
         my $seekPosn = $fio->{rxMatchBlk} * $fio->{rxBlkSize};
-        if ( !seek($fio->{rxInFd}, $seekPosn, 0) ) {
+        if ( !sysseek($fio->{rxInFd}, $seekPosn, 0) ) {
             $fio->log("Unable to seek $fio->{rxFile}{localName} to $seekPosn");
             return -1;
         }

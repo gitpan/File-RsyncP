@@ -61,7 +61,7 @@ UINT4 adler32_checksum(char *buf, int len)
  *   md4DigestLen > 16: output MD4 is really MD4 state, prior to
  *                      MD4FinalRsync().
  */
-void rsync_checksum(char *buf, UINT4 len, UINT4 blockSize, UINT4 seed,
+void rsync_checksum(unsigned char *buf, UINT4 len, UINT4 blockSize, UINT4 seed,
     unsigned char *digest, int md4DigestLen)
 {
     unsigned char seedBytes[4];
@@ -71,7 +71,7 @@ void rsync_checksum(char *buf, UINT4 len, UINT4 blockSize, UINT4 seed,
     }
     while ( len > 0 ) {
 	int thisLen = len < blockSize ? len : blockSize;
-	UINT4 adler32 = adler32_checksum(buf, thisLen);
+	UINT4 adler32 = adler32_checksum((char*)buf, thisLen);
 
 	MD4Encode(digest, &adler32, 1);
 	digest += 4;
@@ -127,8 +127,8 @@ void rsync_checksum(char *buf, UINT4 len, UINT4 blockSize, UINT4 seed,
  * md4DigestLen is used to specify the MD4 digest length (eg: 2 or 16).
  * The output data size is blockCnt * (4 + md4DigestLen) bytes.
  */
-void rsync_checksum_update(char *digestIn, UINT4 blockCnt, UINT4 blockSize,
-    UINT4 blockLastLen, UINT4 seed,
+void rsync_checksum_update(unsigned char *digestIn, UINT4 blockCnt,
+    UINT4 blockSize, UINT4 blockLastLen, UINT4 seed,
     unsigned char *digestOut, int md4DigestLen)
 {
     unsigned char seedBytes[4];
