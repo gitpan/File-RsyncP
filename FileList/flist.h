@@ -193,14 +193,13 @@
 #define STRUCT_STAT struct stat
 
 struct file_struct {
-	unsigned flags;
-	time_t modtime;
 	double length;		/* crude portable way to get up to 2^51 */
-	mode_t mode;
-
 	double inode;		/* crude portable way to get up to 2^51 */
 	/** Device this file lives upon */
 	double dev;		/* crude portable way to get up to 2^51 */
+
+	mode_t mode;
+	time_t modtime;
 
 	/** If this is a device node, the device number. */
 	DEV64_T rdev;
@@ -211,7 +210,8 @@ struct file_struct {
 	char *basedir;
 	char *link;
 	char *sum;
-        int dirnameAlloc;
+	unsigned char flags;
+        unsigned char dirnameAlloc;
 };
 
 

@@ -1,5 +1,11 @@
 Revision history for Perl module File::RsyncP.
 
+0.50 Sat Mar 20 18:19:50 PST 2004
+
+  - Added doPartial option to support BackupPC 2.1.0.
+
+  - Added File::RsyncP::abort() for graceful cleanup mid-transfer.
+
 0.47 Sun Mar 14 21:37:22 PST 2004
 
   - Changed FileList/FileList.xs so that uid, gid, mode and mtime

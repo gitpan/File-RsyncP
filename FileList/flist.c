@@ -320,6 +320,13 @@ void clean_flist(struct file_list *flist, int strip_root)
             }
         }
     }
+
+    /*
+     * reset the flag so it can be used by the rsync code
+     */
+    for (i = 0; i < flist->count; i++) {
+	flist->files[i]->flags = 0;
+    }
 }
 
 void clean_fname(char *name)

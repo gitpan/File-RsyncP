@@ -202,6 +202,34 @@ get(flist, index)
     OUTPUT:
         RETVAL
 
+unsigned int
+flagGet(flist, index)
+    INPUT:
+	File::RsyncP::FileList flist
+        unsigned int index
+    CODE:
+    {
+        if ( index >= flist->count ) {
+            XSRETURN_UNDEF; 
+        }
+        RETVAL = flist->files[index]->flags;
+    }
+    OUTPUT:
+        RETVAL
+
+void
+flagSet(flist, index, value)
+    INPUT:
+	File::RsyncP::FileList flist
+        unsigned int index
+        unsigned int value
+    CODE:
+    {
+        if ( index < flist->count ) {
+	    flist->files[index]->flags = value;
+        }
+    }
+
 void
 clean(flist)
     INPUT:

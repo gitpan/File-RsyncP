@@ -30,7 +30,7 @@
 #
 #========================================================================
 #
-# Version 0.47, released 14 Mar 2004.
+# Version 0.50, released 20 Mar 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -45,7 +45,7 @@ use File::Find;
 use Data::Dumper;
 
 use vars qw($VERSION);
-$VERSION = '0.47';
+$VERSION = '0.50';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -882,6 +882,7 @@ Normally should return undef, meaning use the default setting of
 ignore-times.  Otherwise, if this function returns zero or non-zero, the
 returned value  overrides the setting of ignore-times for this file.
 The argument is a hashref typically returned by File::RsyncP::FileList->get.
+See the doPartial option in File::RsyncP->new().
 
 =back
 

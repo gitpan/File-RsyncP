@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.47, released 14 Mar 2004.
+# Version 0.50, released 20 Mar 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -47,9 +47,10 @@ use File::RsyncP::FileIO;
 use File::RsyncP::FileList;
 use Getopt::Long;
 use Data::Dumper;
+use Config;
 
 use vars qw($VERSION);
-$VERSION = '0.47';
+$VERSION = '0.50';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -68,6 +69,7 @@ sub new
     my $rs = bless {
         protocol_version => 26,
 	logHandler       => \&logHandler,
+	abort		 => 0,
 	%$options,
     }, $class;
 
@@ -103,6 +105,15 @@ sub new
 		    });
     } else {
 	$rs->{fio}->blockSize($rs->{blockSize});
+    }
+
+    #
+    # build signal list in case we do an abort
+    #
+    my $i = 0;
+    foreach my $name ( split(' ', $Config{sig_name}) ) {
+	$rs->{sigName2Num}{$name} = $i;
+	$i++;
     }
     return $rs;
 }
@@ -330,6 +341,12 @@ sub go
         #
 	$rs->{chunkData} = substr($rs->{chunkData}, 4);
 
+	#
+	# If this is a partial, then check which files we are
+	# going to skip
+	#
+	$rs->partialFileListPopulate() if ( $rs->{doPartial} );
+
         #
         # Dup the $rs->{fh} socket file handle into two pieces: read-only
         # and write-only.  The child gets the read-only handle and
@@ -373,7 +390,7 @@ sub go
             $rs->log("Child is sending done")
 			    if ( $rs->{logLevel} >= 5 );
             print(WH "done\n");
-            $rs->fileDeltaGet(*WH, 1);
+            $rs->fileDeltaGet(*WH, 1) if ( !$rs->{abort} );
             #
             # Get stats
             #
@@ -383,6 +400,7 @@ sub go
             #
             $rs->writeData(pack("V", 0xffffffff), 1);
 	    $rs->{fio}->finish(1);
+            $rs->log("Child is aborting") if ( $rs->{abort} );
             print(WH "exit\n");
             exit(0);
         }
@@ -404,19 +422,30 @@ sub go
         # Phase 1: csum length is 2
         #
         $rs->fileCsumSend(0);
-        return $rs->{fatalErrorMsg} if ( $rs->{fatalError} );
 
         #
         # Phase 2: csum length is 16
         #
         $rs->fileCsumSend(1);
-        return $rs->{fatalErrorMsg} if ( $rs->{fatalError} );
+
+	if ( $rs->{abort} ) {
+	    #
+	    # If we are aborting, give the child a few seconds
+	    # to finish up.
+	    #
+	    for ( my $i = 0 ; $i < 10 ; $i++ ) {
+		last if ( $rs->{childDone} >= 3 || $rs->pollChild(1) < 0 );
+	    }
+	    $rs->{fatalErrorMsg} = $rs->{abortReason}
+			    if ( !defined($rs->{fatalErrorMsg}) );
+	}
 	
 	#
 	# Done
 	#
 	$rs->{fio}->finish(0);
         close(RH);
+        return $rs->{fatalErrorMsg} if ( defined($rs->{fatalErrorMsg}) );
         return;
     } else {
         #syswrite($rs->{fh}, pack("V", time));
@@ -442,9 +471,39 @@ sub go
 	# Get final int handshake, and wait for EOF
 	#
 	$rs->getData(4);
+	return -1 if ( $rs->{abort} );
         sysread($rs->{fh}, my $data, 1);
 
         return;
+    }
+}
+
+#
+# When a partial rsync is done (meaning selective per-file ignore-attr)
+# we pass through the file list and remember which files we should
+# skip.  This allows the child to callback the user on each skipped
+# file.
+#
+sub partialFileListPopulate
+{
+    my($rs) = @_;
+    my $cnt = $rs->{fileList}->count;
+    for ( my $n = 0 ; $n < $cnt ; $n++ ) {
+	my $f = $rs->{fileList}->get($n);
+	my $attr = $rs->{fio}->attribGet($f);
+	my $thisIgnoreAttr = $rs->{fio}->ignoreAttrOnFile($f);
+
+	#
+	# check if we should skip this file: same type, size, mtime etc
+	#
+	if ( !$thisIgnoreAttr
+	      && $f->{size}  == $attr->{size}
+	      && $f->{mtime} == $attr->{mtime}
+	      && $f->{mode}  == $attr->{mode}
+	      && (!$rs->{rsyncOpts}{group} || $f->{gid} == $attr->{gid})
+	      && (!$rs->{rsyncOpts}{owner} || $f->{uid} == $attr->{uid}) ) {
+	    $rs->{fileList}->flagSet($n, 1);
+	}
     }
 }
 
@@ -509,7 +568,13 @@ sub fileSpecialCreate
 	my $f = $rs->{fileList}->get($n);
 	my $attr = $rs->{fio}->attribGet($f);
 
+	if ( $rs->{doPartial} && $rs->{fileList}->flagGet($n) ) {
+	    $rs->{fio}->attrSkippedFile($f, $attr);
+	    next;
+	}
+
 	$rs->{fio}->attribSet($f, 1);
+
 	if ( ($f->{mode} & S_IFMT) != S_IFREG ) {
 	    #
 	    # A special file
@@ -545,14 +610,19 @@ sub fileCsumSend
 	if ( @{$rs->{doList}} ) {
 	    my $n = shift(@{$rs->{doList}});
             my $f = $rs->{fileList}->get($n);
-            my $attr = $rs->{fio}->attribGet($f);
-	    my $thisIgnoreAttr = $rs->{fio}->ignoreAttrOnFile($f);
-	    $thisIgnoreAttr = $ignoreAttr if ( !defined($thisIgnoreAttr) );
+
+	    if ( $rs->{doPartial} && $rs->{fileList}->flagGet($n) ) {
+		$rs->log("Skipping $f->{name} (same attr on partial)")
+			    if ( $rs->{logLevel} >= 3
+			       && ($f->{mode} & S_IFMT) == S_IFREG );
+		next;
+	    }
 
 	    #
 	    # check if we should skip this file: same type, size, mtime etc
 	    #
-	    if ( !$thisIgnoreAttr
+            my $attr = $rs->{fio}->attribGet($f);
+	    if ( !$ignoreAttr
 		  && $f->{size}  == $attr->{size}
 		  && $f->{mtime} == $attr->{mtime}
 		  && $f->{mode}  == $attr->{mode}
@@ -564,6 +634,7 @@ sub fileCsumSend
 		next;
 	    }
 
+            my $blkSize;
             if ( ($f->{mode} & S_IFMT) != S_IFREG ) {
                 #
                 # Remote file is special: no checksum needed.
@@ -584,7 +655,8 @@ sub fileCsumSend
                             0,
                             $rs->{blockSize},
                             0), 1);
-            } elsif ( $rs->{fio}->csumStart($f) < 0 ) {
+            } elsif ( ($blkSize = $rs->{fio}->csumStart($f, 0,
+                                                  $rs->{blockSize})) < 0 ) {
 		#
 		# Can't open the file, so send an empty checksum
 		#
@@ -599,11 +671,15 @@ sub fileCsumSend
 		#
 		# The local file is a regular file, so generate and
 		# send the checksums.  First compute adaptive block
-		# size, from $rs->{blockSize} to 16384 based on file size.
+		# size, from $rs->{blockSize} to 16384 based on file
+                # size.
 		#
-		my $blkSize = int($attr->{size} / 10000);
-		$blkSize = $rs->{blockSize} if ( $blkSize < $rs->{blockSize} );
-		$blkSize = 16384 if ( $blkSize > 16384 );
+                if ( $blkSize <= 0 ) {
+                    $blkSize = int($attr->{size} / 10000);
+                    $blkSize = $rs->{blockSize}
+                                    if ( $blkSize < $rs->{blockSize} );
+                    $blkSize = 16384 if ( $blkSize > 16384 );
+                }
 		my $blkCnt = int(($attr->{size} + $blkSize - 1)
 						/ $blkSize);
 		$rs->log("Sending csums for $f->{name} (size=$attr->{size})")
@@ -623,13 +699,14 @@ sub fileCsumSend
 		    $rs->writeData($csum);
 		    $nWrite -= length($csum);
 		    $blkCnt -= $thisCnt;
+		    return if ( $rs->{abort} );
 		}
 		#
 		# In case the reported file size was wrong, we need to
 		# send enough checksum data.  It's not clear that sending
 		# zeros is right, but this shouldn't happen in any case.
 		#
-                if ( $nWrite > 0 ) {
+                if ( $nWrite > 0 && !$rs->{abort} ) {
 		    $rs->writeData(pack("c", 0) x $nWrite);
                 }
 		$rs->{fio}->csumEnd;
@@ -649,7 +726,7 @@ sub fileCsumSend
 	# If there are no more files but we haven't seen "exit"
 	# from the child then block forever.
 	#
-        return if ( $rs->{fatalError} );
+        return if ( $rs->{abort} );
 	$rs->pollChild(($phase == 1 && !@{$rs->{doList}}) ? undef : 0);
     }
     if ( $phase == 0 ) {
@@ -670,7 +747,7 @@ sub pollChild
     my($rs, $timeout) = @_;
     my($FDread);
 
-    return if ( !defined($rs->{childFh}) );
+    return -1 if ( !defined($rs->{childFh}) );
     $rs->log("pollChild($timeout)") if ( $rs->{logLevel} >= 10 );
 
     vec($FDread, fileno($rs->{childFh}), 1) = 1;
@@ -687,7 +764,8 @@ sub pollChild
         delete($rs->{childFh});
 	$rs->log("Parent read EOF from child: fatal error!")
 		if ( $rs->{logLevel} >= 1 );
-        $rs->{fatalError} = 1;
+        $rs->{abort}         = 1;
+        $rs->{fatalError}    = 1;
         $rs->{fatalErrorMsg} = "Child exited prematurely";
 	return -1;
     }
@@ -936,12 +1014,28 @@ sub fileListSend
     $rs->{fileList}->clean;
 }
 
+sub abort
+{
+    my($rs, $reason, $timeout) = @_;
+
+    $rs->{abort} = 1;
+    $rs->{timeout} = $timeout if ( defined($timeout) );
+    $rs->{abortReason} = $reason || "aborted by user request";
+    kill($rs->{sigName2Num}{ALRM}, $rs->{childPID})
+			     if ( defined($rs->{childPID}) );
+    alarm($rs->{timeout}) if ( $rs->{timeout} );
+}
+
 sub statsGet
 {
     my($rs, $fh) = @_;
 
-    return -1 if ( $rs->getChunk(12) < 0 );
-    my($totalWritten, $totalRead, $totalSize) = unpack("V3", $rs->{chunkData});
+    my($totalWritten, $totalRead, $totalSize) = (0, 0, 0);
+
+    if ( $rs->getChunk(12) >= 0 ) {
+	($totalWritten, $totalRead, $totalSize)
+			= unpack("V3", $rs->{chunkData});
+    }
     
     if ( defined($fh) ) {
 	my $fioStats = $rs->{fio}->statsGet;
@@ -964,15 +1058,19 @@ sub getData
     my($rs, $len) = @_;
     my($data);
 
+    return -1 if ( $rs->{abort} );
     alarm($rs->{timeout}) if ( $rs->{timeout} );
     while ( length($rs->{readData}) < $len ) {
+	return -1 if ( $rs->{abort} );
         sysread($rs->{fh}, $data, 65536);
         if ( length($data) == 0 ) {
             $rs->log("Read EOF: $!") if ( $rs->{logLevel} >= 1 );
+	    return -1 if ( $rs->{abort} );
 	    sysread($rs->{fh}, $data, 65536);
             $rs->log(sprintf("Tried again: got %d bytes", length($data)))
 			if ( $rs->{logLevel} >= 1 );
-            $rs->{fatalError} = 1;
+            $rs->{abort}         = 1;
+            $rs->{fatalError}    = 1;
             $rs->{fatalErrorMsg} = "Unable to read $len bytes";
             return -1;
         }
@@ -1044,6 +1142,7 @@ sub writeFlush
 
     my($FDread, $FDwrite);
 
+    return if ( $rs->{abort} );
     alarm($rs->{timeout}) if ( $rs->{timeout} );
     while ( $rs->{writeBuf} ne "" ) {
 	#(my $chunk, $rs->{writeBuf}) = unpack("a4092 a*", $rs->{writeBuf});
@@ -1058,6 +1157,7 @@ sub writeFlush
 			&& vec($rout, fileno($rs->{childFh}), 1) ) {
 	    $rs->pollChild(0);
 	}
+	return if ( $rs->{abort} );
 	if ( vec($rwrite, fileno($rs->{fh}), 1) ) {
 	    my $n = syswrite($rs->{fh}, $rs->{writeBuf});
 	    if ( $n <= 0 ) {
@@ -1316,6 +1416,16 @@ Timeout in seconds for IO.  Default is 0, meaning no timeout.
 Uses alarm() and it is the caller's responsbility to catch the
 alarm signal.
 
+=item doPartial
+
+If set, a partial rsync is done.  This is to support resuming full
+backups in BackupPC.  When doPartial is set, the --ignore-times
+option can be set on a per-file basis.  On each file in the
+file list, File::RsyncP::FileIO->ignoreAttrOnFile() is called
+on each file, and this returns whether or not attributes should
+be ignored on that file.  If ignoreAttrOnFile() returns 1 then
+it's as though --ignore-times was set for that file.
+
 =back
 
 An example of calling File::RsyncP->new is:
@@ -1402,6 +1512,10 @@ Call this after go() to finish up.  Returns undef on success.
 This can be optionally called to pickup the transfer stats.  It
 returns a hashref containing elements totalRead, totalWritten,
 totalSize, plus whatever the FileIO module might add.
+
+=item abort()
+
+Call this function to abort the transfer.
 
 =back
 
@@ -1493,6 +1607,10 @@ receiving files.  Returns undef on success.
 =item serverClose()
 
 Call this after go() to finish up.  Returns undef on success.
+
+=item abort()
+
+Call this function to abort the transfer.
 
 =back
 

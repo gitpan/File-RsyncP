@@ -1,5 +1,9 @@
 Revision history for Perl module File::RsyncP::FileList.
 
+0.50 Sat Mar 20 18:19:50 PST 2004
+
+  - Added flag set/get functions to new doPartial option.
+
 0.47 Sun Mar 14 21:37:22 PST 2004
 
   - Changed FileList/FileList.xs so that uid, gid, mode and mtime

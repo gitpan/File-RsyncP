@@ -31,7 +31,7 @@
 #
 #========================================================================
 #
-# Version 0.47, released 14 Mar 2004.
+# Version 0.50, released 20 Mar 2004.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -53,7 +53,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '0.47';
+$VERSION = '0.50';
 
 bootstrap File::RsyncP::Digest $VERSION;
 
