@@ -31,7 +31,7 @@
 #
 #========================================================================
 #
-# Version 0.30, released 9 Feb 2003.
+# Version 0.31, released 23 Feb 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -64,7 +64,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
 	
 );
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 bootstrap File::RsyncP::FileList $VERSION;
 
@@ -72,6 +72,7 @@ bootstrap File::RsyncP::FileList $VERSION;
 
 1;
 __END__
+
 =head1 NAME
 
 File::RsyncP::FileList - Perl interface to rsync file list encoding and
@@ -303,7 +304,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
 
 =head1 SEE ALSO
 
-See L<File::RsyncP::Rsync> and L<File::RsyncP::Rsync::FileIO> for more
+See L<http://perlrsync.sourceforge.net> for File::RsyncP's SourceForge
+home page.
+
+See L<File::RsyncP> and L<File::RsyncP::FileIO> for more
 precise examples of using L<File::RsyncP::FileList>.
 
 Also see BackupPC's lib/BackupPC/Xfer/RsyncFileIO.pm for other examples.

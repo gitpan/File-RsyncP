@@ -1,5 +1,12 @@
 Revision history for Perl module File::RsyncP.
 
+0.31 Sun Feb 23 15:17:05 PST 2003
+
+  - Added new stat remoteErrCnt, which counts the number of error
+    messages returned by the remote side.
+
+  - Couple of minor documentation changes.
+
 0.30 Sun Feb  9 23:06:42 PST 2003
 
   - Added timeout parameter to File::RsyncP->new.

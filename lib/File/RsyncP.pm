@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.30, released 9 Feb 2003.
+# Version 0.31, released 23 Feb 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -48,7 +48,7 @@ use File::RsyncP::FileList;
 use Getopt::Long;
 use Data::Dumper;
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -694,12 +694,13 @@ sub pollChild
 	    $rs->log("Got done from child")
 			if ( $rs->{logLevel} >= 4 );
 	    $rs->{childDone} = 1;
-	} elsif ( $mesg =~ /^stats (\d+) (\d+) (\d+) (.*)/ ) {
+	} elsif ( $mesg =~ /^stats (\d+) (\d+) (\d+) (\d+) (.*)/ ) {
 	    $rs->{stats}{totalRead}    = $1;
 	    $rs->{stats}{totalWritten} = $2;
 	    $rs->{stats}{totalSize}    = $3;
-	    my %childStats = eval($4);
-	    $rs->log("Got stats: $1 $2 $3 $4")
+	    $rs->{stats}{remoteErrCnt} += $4;
+	    my %childStats = eval($5);
+	    $rs->log("Got stats: $1 $2 $3 $4 $5")
 			if ( $rs->{logLevel} >= 4 );
 	    $rs->{stats}{childStats}   = \%childStats;
 	    $rs->{stats}{parentStats}  = $rs->{fio}->statsGet;
@@ -931,7 +932,8 @@ sub statsGet
 	my $dump = Data::Dumper->new([$fioStats], [qw(*fioStats)]);
 	$dump->Terse(1);
 	$dump->Indent(0);
-	print($fh "stats $totalWritten $totalRead $totalSize ",
+	my $remoteErrCnt = 0 + $rs->{stats}{remoteErrCnt};
+	print($fh "stats $totalWritten $totalRead $totalSize $remoteErrCnt ",
 		  $dump->Dump, "\n");
     } else {
 	$rs->{stats}{totalRead}    = $totalRead;
@@ -980,7 +982,8 @@ sub getChunk
             $rs->{chunkData} .= $d;
         } else {
 	    $d =~ s/[\n\r]+$//;
-            $rs->log("Remote: $d");
+            $rs->log("Remote[$code]: $d");
+	    $rs->{stats}{remoteErrCnt}++ if ( $code == 1 );
         }
     }
 }
@@ -1087,6 +1090,7 @@ sub shellEscape
 1;
 
 __END__
+
 =head1 NAME
 
 File::RsyncP - Perl Rsync client
@@ -1580,8 +1584,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
 
 =head1 SEE ALSO
 
-See L<File::RsyncP::Rsync::FileIO>, L<File::RsyncP::Rsync::Digest>, and
-L<File::RsyncP::Rsync::FileList>.
+See L<http://perlrsync.sourceforge.net> for File::RsyncP's SourceForge
+home page.
+
+See L<File::RsyncP::FileIO>, L<File::RsyncP::Digest>, and
+L<File::RsyncP::FileList>.
 
 Also see BackupPC's lib/BackupPC/Xfer/Rsync.pm for other examples.
 

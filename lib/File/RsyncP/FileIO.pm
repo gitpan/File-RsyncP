@@ -30,7 +30,7 @@
 #
 #========================================================================
 #
-# Version 0.30, released 9 Feb 2003.
+# Version 0.31, released 23 Feb 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -43,6 +43,8 @@ use File::RsyncP::Digest;
 use File::Path;
 use File::Find;
 use Data::Dumper;
+
+our $VERSION = '0.31';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -668,6 +670,7 @@ sub log
 
 1;
 __END__
+
 =head1 NAME
 
 File::RsyncP::FileIO - Perl Rsync client file system IO
@@ -957,8 +960,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
 
 =head1 SEE ALSO
 
-See L<File::RsyncP>, L<File::RsyncP::Rsync::Digest>, and
-L<File::RsyncP::Rsync::FileList>.
+See L<http://perlrsync.sourceforge.net> for File::RsyncP's SourceForge
+home page.
+
+See L<File::RsyncP>, L<File::RsyncP::Digest>, and
+L<File::RsyncP::FileList>.
 
 Also see BackupPC's lib/BackupPC/Xfer/RsyncFileIO.pm for an example
 of another implementation of File::RsyncP::FileIO, in fact one that

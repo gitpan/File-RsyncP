@@ -31,7 +31,7 @@
 #
 #========================================================================
 #
-# Version 0.30, released 9 Feb 2003.
+# Version 0.31, released 23 Feb 2003.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -53,7 +53,7 @@ require AutoLoader;
 @EXPORT = qw(
 	
 );
-$VERSION = '0.30';
+$VERSION = '0.31';
 
 bootstrap File::RsyncP::Digest $VERSION;
 
@@ -447,6 +447,9 @@ See L<http://rsync.samba.org>.
 
 =head1 SEE ALSO
 
-perl(1).
+See L<http://perlrsync.sourceforge.net> for File::RsyncP's SourceForge
+home page.
+
+See L<File::RsyncP>, L<File::RsyncP::FileIO> and L<File::RsyncP::FileList>.
 
 =cut
