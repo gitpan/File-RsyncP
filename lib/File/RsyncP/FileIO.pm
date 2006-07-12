@@ -30,7 +30,7 @@
 #
 #========================================================================
 #
-# Version 0.52, released 29 May 2004.
+# Version 0.62, released 9 Jul 2006.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -42,10 +42,9 @@ use strict;
 use File::RsyncP::Digest;
 use File::Path;
 use File::Find;
-use Data::Dumper;
 
 use vars qw($VERSION);
-$VERSION = '0.52';
+$VERSION = '0.62';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -64,7 +63,7 @@ sub new
     my $self = bless {
         blockSize    => 700,
         logLevel     => 0,
-        digest       => File::RsyncP::Digest->new,
+        digest       => File::RsyncP::Digest->new($options->{protocol_version}),
         checksumSeed => 0,
 	logHandler   => \&logHandler,
 	%$options,
@@ -78,6 +77,39 @@ sub blockSize
 
     $fio->{blockSize} = $value if ( defined($value) );
     return $fio->{blockSize};
+}
+
+#
+# We publish our version to File::RsyncP.  This is so File::RsyncP
+# can provide backward compatibility to older FileIO code.
+#
+# Versions:
+#
+#   undef or 1:  protocol version 26, no hardlinks
+#   2:           protocol version 28, supports hardlinks
+#
+sub version
+{
+    return 2;
+}
+
+sub preserve_hard_links
+{   
+    my($fio, $value) = @_;
+
+    $fio->{preserve_hard_links} = $value if ( defined($value) );
+    return $fio->{preserve_hard_links};
+}
+
+sub protocol_version
+{
+    my($fio, $value) = @_;
+
+    if ( defined($value) ) {
+        $fio->{protocol_version} = $value;
+        $fio->{digest}->protocol($fio->{protocol_version});
+    }
+    return $fio->{protocol_version};
 }
 
 sub logHandlerSet
@@ -118,7 +150,8 @@ sub csumStart
         return -1;
     }
     if ( $needMD4) {
-	$fio->{csumDigest} = File::RsyncP::Digest->new;
+	$fio->{csumDigest}
+                    = File::RsyncP::Digest->new($fio->{protocol_version});
 	$fio->{csumDigest}->add(pack("V", $fio->{checksumSeed}));
     } else {
 	delete($fio->{csumDigest});
@@ -241,6 +274,7 @@ sub attribGet
 sub attribSet
 {
     my($fio, $f, $placeHolder) = @_;
+    my $ret;
 
     #
     # Ignore placeholder attribute sets: only do real ones.
@@ -260,20 +294,20 @@ sub attribSet
     $f->{atime} = $f->{mtime} if ( !defined($f->{atime}) );
     if ( ($f->{mode} & ~S_IFMT) != ($a->{mode} & ~S_IFMT)
 		&& !chmod($f->{mode} & ~S_IFMT, $lName) ) {
-        $fio->log(sprintf("Can't chmod(%s, 0%o)", $f->{mode}, $lName));
-        return -1;
+        $fio->log(sprintf("Can't chmod(%s, 0%o)", $lName, $f->{mode}));
+        $ret = -1;
     }
     if ( ($f->{uid} != $a->{uid} || $f->{gid} != $a->{gid})
 	    && !chown($f->{uid}, $f->{gid}, $lName) ) {
         $fio->log("Can't chown($f->{uid}, $f->{gid}, $lName)");
-        return -1;
+        $ret = -1;
     }
     if ( ($f->{mtime} != $a->{mtime} || $f->{atime} != $a->{atime})
             && !utime($f->{atime}, $f->{mtime}, $lName) ) {
         $fio->log("Can't mtime($f->{atime}, $f->{mtime}, $lName)");
-        return -1;
+        $ret = -1;
     }
-    return;
+    return $ret;
 }
 
 sub statsGet
@@ -334,6 +368,32 @@ sub makeSpecial
     }
     return $fio->attribSet($f);
 }
+
+#
+# Make a hardlink.  Returns non-zero on error.
+# This actually gets called twice for each hardlink.
+# Once as the file list is processed, and again at
+# the end.  This subroutine should decide whether it
+# should do the hardlinks during the transer or at
+# the end.  Normally they would be done at the end
+# since the target might not exist until them.
+# BackupPC does them as it goes (since it is just saving the
+# hardlink info and not actually making hardlinks).
+#
+sub makeHardLink
+{
+    my($fio, $f, $end) = @_;
+
+    #
+    # In this case, only do hardlinks at the end.
+    #
+    return if ( !$end );
+    my $localPath = $fio->localName($f->{name});
+    my $destLink  = $fio->localName($f->{hlink});
+    $fio->unlink($localPath) if ( -e $localPath );
+    return !link($destLink, $localPath);
+}
+
 
 sub unlink
 {
@@ -433,7 +493,7 @@ sub fileDeltaRxNext
         $fio->{rxOutFd} = *F;
         $fio->{rxTmpFile} = $rxTmpFile;
 
-        $fio->{rxDigest} = File::RsyncP::Digest->new;
+        $fio->{rxDigest} = File::RsyncP::Digest->new($fio->{protocol_version});
         $fio->{rxDigest}->add(pack("V", $fio->{checksumSeed}));
     }
     if ( defined($fio->{rxMatchBlk})
@@ -520,7 +580,7 @@ sub fileDeltaRxDone
         # File was exact match, but we still need to verify the
         # MD4 checksum.  Therefore open and read the file.
         #
-        $fio->{rxDigest} = File::RsyncP::Digest->new;
+        $fio->{rxDigest} = File::RsyncP::Digest->new($fio->{protocol_version});
         $fio->{rxDigest}->add(pack("V", $fio->{checksumSeed}));
         if ( open(F, $fio->{rxFile}{localName}) ) {
             $fio->{rxInFd} = *F;
@@ -608,15 +668,25 @@ sub fileListEltSend
     (my $n = $name) =~ s/^\Q$fio->{localDir}/$fio->{remoteDir}/;
     if ( -l $name ) {
 	@s = lstat($name);
-	$extra = { link => readlink($name) };
+	$extra = {
+	    %$extra,
+            link => readlink($name),
+        };
     } else {
 	@s = stat($name);
+    }
+    if ( $fio->{preserve_hard_links}
+            && ($s[2] & S_IFMT) == S_IFREG
+            && ($fio->{protocol_version} < 27 || $s[3] > 1) ) {
+	$extra = {
+	    %$extra,
+            dev   => $s[0],
+            inode => $s[1],
+        };
     }
     $fio->log("fileList send $name (remote=$n)") if ( $fio->{logLevel} >= 3 );
     $fList->encode({
             name  => $n,
-            dev   => $s[0],
-            inode => $s[1],
             mode  => $s[2],
             uid   => $s[4],
             gid   => $s[5],

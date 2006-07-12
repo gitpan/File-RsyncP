@@ -31,11 +31,11 @@ typedef struct {
   /*
    * MD4 finalization for Rsync compatability.  For protocol version <= 26
    * (rsync <= 2.5.6) rsync has a bug where it doesn't append the pad when
-   * the last fragment is empty (message size is a multiple of 64).  Rsync
+   * the last fragment is empty (digest size is a multiple of 64).  Rsync
    * also only has a 32 bit byte counter, so the number of bits overflows
    * for >= 512MB.  Both bugs are fixed for protocol version >= 27.
    */
-  unsigned char rsyncBug;
+  unsigned char rsyncMD4Bug;
 } RsyncMD4_CTX;
 
 void RsyncMD4Init PROTO_LIST ((RsyncMD4_CTX *));

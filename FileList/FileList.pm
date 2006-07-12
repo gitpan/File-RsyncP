@@ -31,7 +31,7 @@
 #
 #========================================================================
 #
-# Version 0.52, released 29 May 2004.
+# Version 0.62, released 9 Jul 2006.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -63,7 +63,7 @@ use vars qw(@ISA %EXPORT_TAGS @EXPORT_OK @EXPORT $VERSION);
 @EXPORT = qw(
 	
 );
-$VERSION = '0.52';
+$VERSION = '0.62';
 
 bootstrap File::RsyncP::FileList $VERSION;
 

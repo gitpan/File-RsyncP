@@ -1,5 +1,15 @@
 Revision history for Perl module File::RsyncP.
 
+0.62 Sun Jul  9 11:18:32 PDT 2006
+
+  - Added hardlink support.
+
+  - Added support for protocol version 28.
+
+  - Moved daemon @RSYNCD: protocolVersion send before the getLine
+    to work correctly with rsync on novell (suggested by
+    Jacob Lundqvist).
+
 0.52 Sat May 29 19:16:22 PDT 2004
 
   - Changed the parent write file handle to be non-blocking.  This

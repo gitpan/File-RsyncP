@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.52, released 29 May 2004.
+# Version 0.62, released 9 Jul 2006.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -48,10 +48,11 @@ use File::RsyncP::FileList;
 use Getopt::Long;
 use Data::Dumper;
 use Config;
+use Encode qw/from_to/;
 use Fcntl;
 
 use vars qw($VERSION);
-$VERSION = '0.52';
+$VERSION = '0.62';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -68,11 +69,26 @@ sub new
 
     $options ||= {};
     my $rs = bless {
-        protocol_version => 26,
+        protocol_version => 28,
 	logHandler       => \&logHandler,
 	abort		 => 0,
 	%$options,
     }, $class;
+
+    #
+    # In recent versions of rsync (eg: 2.6.8) --devices is no
+    # longer identical to -D.  Now -D means --devices --specials.
+    # File::RsyncP assumes --devices behaves the same as -D,
+    # and doesn't currently handle --specials.
+    #
+    # To make sure we don't lie to the remote rsync, we must
+    # send -D instead of --devices.  Therefore, we manually
+    # replace --devices with -D in $rs->{rsyncArgs}.
+    #
+    for ( my $i = 0 ; $i < @{$rs->{rsyncArgs}} ; $i++ ) {
+        $rs->{rsyncArgs}[$i] = "-D"
+                    if ( $rs->{rsyncArgs}[$i] eq "--devices" );
+    }
 
     #
     # process rsync options
@@ -80,32 +96,79 @@ sub new
     local(@ARGV);
     $rs->{rsyncOpts} = {};
     @ARGV = @{$rs->{rsyncArgs}};
+
     my $p = new Getopt::Long::Parser(
 		config => ["bundling", "pass_through"],
 	    );
+
+    #
+    # First extract all the exclude related options for processing later
+    #
+    return if ( !$p->getoptions(
+                "exclude=s",       sub { optExclude($rs, @_); },
+                "exclude-from=s",  sub { optExclude($rs, @_); },
+                "include=s",       sub { optExclude($rs, @_); },
+                "include-from=s",  sub { optExclude($rs, @_); },
+                "cvs-exclude|C=s", sub { optExclude($rs, @_); },
+	    ) );
+
+    #
+    # Since the exclude arguments are no longer needed (they are
+    # passed via the socket, not the command-line args), update
+    # $rs->{rsyncOpts}
+    #
+    @{$rs->{rsyncArgs}} = @ARGV;
+
+    #
+    # Now process the rest of the arguments we care about
+    #
     return if ( !$p->getoptions($rs->{rsyncOpts},
-		    "numeric-ids",
-		    "perms|p",
-		    "owner|o",
-		    "group|g",
-		    "devices|D",
-		    "links|l",
-		    "ignore-times|I",
 		    "block-size=i",
-		    "verbose|v+",
+		    "devices|D",
+                    "from0|0",
+		    "group|g",
+		    "hard-links|H",
+		    "ignore-times|I",
+		    "links|l",
+		    "numeric-ids",
+		    "owner|o",
+		    "perms|p",
+		    "protocol=i",
 		    "recursive|r",
 		    "relative|R",
 		    "timeout",
+		    "verbose|v+",
 	    ) );
-    $rs->{blockSize} = $rs->{rsyncOpts}{"block-size"};
-    $rs->{timeout} ||= $rs->{rsyncOpts}{timeout};
+    $rs->{blockSize}          = $rs->{rsyncOpts}{"block-size"};
+    $rs->{timeout}          ||= $rs->{rsyncOpts}{timeout};
+    $rs->{protocol_version}   = $rs->{rsyncOpts}{protocol}
+		    if ( defined($rs->{rsyncOpts}{protocol}) );
+    $rs->{fio_version} = 1;
     if ( !defined($rs->{fio}) ) {
 	$rs->{fio} = File::RsyncP::FileIO->new({
-			blockSize  => $rs->{blockSize},
-			logLevel   => $rs->{logLevel},
+			blockSize           => $rs->{blockSize},
+			logLevel            => $rs->{logLevel},
+                        protocol_version    => $rs->{protocol_version},
+                        preserve_hard_links => $rs->{rsyncOpts}{"hard-links"},
+			clientCharset       => $rs->{clientCharset},
 		    });
+	eval { $rs->{fio_version} = $rs->{fio}->version; };
     } else {
+        #
+        # Tell the existing FileIO module various parameters that
+        # depend upon the parsed rsync args
+        #
+	eval { $rs->{fio_version} = $rs->{fio}->version; };
 	$rs->{fio}->blockSize($rs->{blockSize});
+	if ( $rs->{fio_version} >= 2 ) {
+	    $rs->{fio}->protocol_version($rs->{protocol_version});
+	    $rs->{fio}->preserve_hard_links($rs->{rsyncOpts}{"hard-links"});
+	} else {
+	    #
+	    # old version of FileIO: only supports version 26
+	    #
+	    $rs->{protocol_version} = 26 if ( $rs->{protocol_version} > 26 );
+	}
     }
 
     #
@@ -117,6 +180,40 @@ sub new
 	$i++;
     }
     return $rs;
+}
+
+sub optExclude
+{
+    my($rs, $argName, $argValue) = @_;
+
+    push(@{$rs->{excludeArgs}}, {name => $argName, value => $argValue});
+}
+
+#
+# Strip the exclude and include arguments from the given argument list
+#
+sub excludeStrip
+{
+    my($rs, $args) = @_;
+    local(@ARGV);
+    my $p = new Getopt::Long::Parser(
+		config => ["bundling", "pass_through"],
+	    );
+
+    @ARGV = @$args;
+
+    #
+    # Extract all the exclude related options
+    #
+    $p->getoptions(
+            "exclude=s",       sub { },
+            "exclude-from=s",  sub { },
+            "include=s",       sub { },
+            "include-from=s",  sub { },
+            "cvs-exclude|C=s", sub { },
+        );
+
+    return \@ARGV;
 }
 
 sub serverConnect
@@ -134,15 +231,24 @@ sub serverConnect
 				    || return "inet socket: $!";
     connect(FH, $paddr)             || return "inet connect: $!";
     $rs->{fh} = *FH;
+    $rs->writeData("\@RSYNCD: $rs->{protocol_version}\n", 1);
     my $line = $rs->getLine;
     alarm(0) if ( $rs->{timeout} );
     if ( $line !~ /\@RSYNCD:\s*(\d+)/ ) {
 	return "unexpected response $line\n";
     }
     $rs->{remote_protocol} = $1;
+    if ( $rs->{remote_protocol} < 20 || $rs->{remote_protocol} > 40 ) {
+        return "Bad protocol version: $rs->{remote_protocol}\n";
+    }
     $rs->log("Connected to $host:$port, remote version $rs->{remote_protocol}")
-					    if ( $rs->{logLevel} >= 1 );
-    $rs->writeData("\@RSYNCD: $rs->{protocol_version}\n", 1);
+                        if ( $rs->{logLevel} >= 1 );
+    $rs->{protocol_version} = $rs->{remote_protocol}
+                        if ( $rs->{protocol_version} > $rs->{remote_protocol} );
+    $rs->{fio}->protocol_version($rs->{protocol_version})
+			if ( $rs->{fio_version} >= 2 );
+    $rs->log("Negotiated protocol version $rs->{protocol_version}")
+                        if ( $rs->{logLevel} >= 1 );
     return;
 }
 
@@ -173,7 +279,7 @@ sub serverService
     return $1 if ( $line =~ /\@ERROR: (.*)/ );
     if ( $line =~ /\@RSYNCD: AUTHREQD (.{22})/ ) {
 	my $challenge = $1;
-	my $md4 = new File::RsyncP::Digest;
+	my $md4 = File::RsyncP::Digest->new($rs->{protocol_version});
 	$md4->add(pack("V", 0));
 	$md4->add($passwd);
 	$md4->add($challenge);
@@ -294,10 +400,16 @@ sub remoteStart
     $rs->{readData} = substr($rs->{readData}, 4);
     $rs->{remote_protocol} = $version;
     $rs->log("Got remote protocol $version") if ( $rs->{logLevel} >= 1 );
-    if ( $version < 0 || $version > 30 ) {
+    $rs->{protocol_version} = $rs->{remote_protocol}
+                    if ( $rs->{protocol_version} > $rs->{remote_protocol} );
+    $rs->{fio}->protocol_version($rs->{protocol_version})
+	    if ( $rs->{fio_version} >= 2 );
+    if ( $version < 20 || $version > 40 ) {
         $rs->log("Fatal error (bad version): $data");
         return -1;
     }
+    $rs->log("Negotiated protocol version $rs->{protocol_version}")
+                    if ( $rs->{logLevel} >= 1 );
     return;
 }
 
@@ -332,13 +444,31 @@ sub go
 	    return "fileListReceive failed";
 	}
 
+        #
+        # Sort and match inode data if hardlinks are enabled
+        #
+        if ( $rs->{rsyncOpts}{"hard-links"} ) {
+            $rs->{fileList}->init_hard_links();
+            ##my $cnt = $rs->{fileList}->count;
+            ##for ( my $n = 0 ; $n < $cnt ; $n++ ) {
+            ##  my $f = $rs->{fileList}->get($n);
+            ##  print Dumper($f);
+            ##}
+        }
+
 	if ( $rs->{logLevel} >= 2 ) {
 	    my $cnt = $rs->{fileList}->count;
 	    $rs->log("Got file list: $cnt entries");
 	}
 
         #
-        # Skip a word (check what this is for -- exclude list??)
+        # At this point the uid/gid list would be received,
+        # but with numeric-ids nothing is sent.  We currently
+        # only support the numeric-ids case.
+        #
+
+        #
+        # Skip a word: this is the io_error flag.
         #
 	$rs->{chunkData} = substr($rs->{chunkData}, 4);
 
@@ -435,7 +565,7 @@ sub go
         # the child to finish.  The child tells us if any files
         # need to be repeated for phase 2.
         #
-        # Phase 1: csum length is 2
+        # Phase 1: csum length is 2 (or >= 2 for protocol_version >= 27)
         #
         $rs->fileCsumSend(0);
 
@@ -506,6 +636,8 @@ sub partialFileListPopulate
     my $cnt = $rs->{fileList}->count;
     for ( my $n = 0 ; $n < $cnt ; $n++ ) {
 	my $f = $rs->{fileList}->get($n);
+        from_to($f->{name}, $rs->{clientCharset}, "utf8")
+                                if ( $rs->{clientCharset} ne "" );
 	my $attr = $rs->{fio}->attribGet($f);
 	my $thisIgnoreAttr = $rs->{fio}->ignoreAttrOnFile($f);
 
@@ -517,7 +649,9 @@ sub partialFileListPopulate
 	      && $f->{mtime} == $attr->{mtime}
 	      && $f->{mode}  == $attr->{mode}
 	      && (!$rs->{rsyncOpts}{group} || $f->{gid} == $attr->{gid})
-	      && (!$rs->{rsyncOpts}{owner} || $f->{uid} == $attr->{uid}) ) {
+	      && (!$rs->{rsyncOpts}{owner} || $f->{uid} == $attr->{uid})
+	      && (!$rs->{rsyncOpts}{"hard-links"}
+                        || $f->{hlink_self} == $attr->{hlink_self}) ) {
 	    $rs->{fileList}->flagSet($n, 1);
 	}
     }
@@ -530,11 +664,6 @@ sub fileListReceive
 	$uid, $gid, $rdev);
     my($data, $flData);
 
-    #
-    # Send empty exclude file list
-    #
-    syswrite($rs->{fh}, pack("N", 0));
-
     $rs->{fileList} = File::RsyncP::FileList->new({
         preserve_uid        => $rs->{rsyncOpts}{owner},
         preserve_gid        => $rs->{rsyncOpts}{group},
@@ -542,9 +671,44 @@ sub fileListReceive
         preserve_devices    => $rs->{rsyncOpts}{devices},
         preserve_hard_links => $rs->{rsyncOpts}{"hard-links"},
         always_checksum     => $rs->{rsyncOpts}{checksum},
-        remote_version      => $rs->{remote_protocol},
+        protocol_version    => $rs->{protocol_version},
     });
 
+    #
+    # Process the exclude/include arguments and send the
+    # exclude/include file list
+    #
+    foreach my $arg ( @{$rs->{excludeArgs}} ) {
+        if ( $arg->{name} eq "exclude" ) {
+            $rs->{fileList}->exclude_add($arg->{value}, 0);
+        } elsif ( $arg->{name} eq "include" ) {
+            $rs->{fileList}->exclude_add($arg->{value}, 2);
+        } elsif ( $arg->{name} eq "exclude-from" ) {
+            $rs->{fileList}->exclude_add_file($arg->{value}, 1);
+        } elsif ( $arg->{name} eq "include-from" ) {
+            $rs->{fileList}->exclude_add_file($arg->{value}, 3);
+        } elsif ( $arg->{name} eq "cvs-exclude" ) {
+            $rs->{fileList}->exclude_cvs_add();
+        } else {
+            $rs->log("Error: Don't recognize exclude argument $arg->{name}"
+                   . " ($arg->{value})");
+        }
+    }
+    $rs->{fileList}->exclude_list_send();
+    $rs->writeData($rs->{fileList}->encodeData(), 1);
+    if ( $rs->{logLevel} >= 1 ) {
+        foreach my $exc ( @{$rs->{fileList}->exclude_list_get()} ) {
+            if ( $exc->{flags} & (1 << 4) ) {
+                $rs->log("Sent include: $exc->{pattern}");
+            } else {
+                $rs->log("Sent exclude: $exc->{pattern}");
+            }
+        }
+    }
+
+    #
+    # Now receive the file list
+    #
     my $curr = 0;
     while ( !$rs->{fileList}->decodeDone ) {
         return -1 if ( $rs->{chunkData} eq "" && $rs->getChunk(1) < 0 );
@@ -554,6 +718,8 @@ sub fileListReceive
 	    my $end = $rs->{fileList}->count;
 	    while ( $curr < $end ) {
 		my $f = $rs->{fileList}->get($curr);
+                from_to($f->{name}, $rs->{clientCharset}, "utf8")
+                                        if ( $rs->{clientCharset} ne "" );
 		$rs->log("Got file ($curr of $end): $f->{name}");
 		$curr++;
 	    }
@@ -582,6 +748,8 @@ sub fileSpecialCreate
     $end = $rs->{fileList}->count if ( !defined($end) );
     for ( my $n = $start ; $n < $end ; $n++ ) {
 	my $f = $rs->{fileList}->get($n);
+        from_to($f->{name}, $rs->{clientCharset}, "utf8")
+                                if ( $rs->{clientCharset} ne "" );
 	my $attr = $rs->{fio}->attribGet($f);
 
 	if ( $rs->{doPartial} && $rs->{fileList}->flagGet($n) ) {
@@ -598,13 +766,19 @@ sub fileSpecialCreate
 	    if ( ($f->{mode} & S_IFMT) == S_IFDIR ) {
 		if ( $rs->{fio}->makePath($f) ) {
 		    # error
+                    $rs->log("Error: makePath($f->{name}) failed");
 		}
 	    } else {
 		if ( $rs->{fio}->makeSpecial($f) ) {
 		    # error
+                    $rs->log("Error: makeSpecial($f->{name}) failed");
 		}
 	    }
-	}
+	} elsif ( defined($f->{hlink}) && !$f->{hlink_self} ) {
+            if ( $rs->{fio}->makeHardLink($f, 0) ) {
+                $rs->log("Error: makeHardlink($f->{name} -> $f->{hlink}) failed");
+            }
+        }
     }
 }
 
@@ -626,6 +800,8 @@ sub fileCsumSend
 	if ( @{$rs->{doList}} ) {
 	    my $n = shift(@{$rs->{doList}});
             my $f = $rs->{fileList}->get($n);
+            from_to($f->{name}, $rs->{clientCharset}, "utf8")
+                                    if ( $rs->{clientCharset} ne "" );
 
 	    if ( $rs->{doPartial} && $rs->{fileList}->flagGet($n) ) {
 		$rs->log("Skipping $f->{name} (same attr on partial)")
@@ -638,12 +814,16 @@ sub fileCsumSend
 	    # check if we should skip this file: same type, size, mtime etc
 	    #
             my $attr = $rs->{fio}->attribGet($f);
+
 	    if ( !$ignoreAttr
+                  && $phase == 0
 		  && $f->{size}  == $attr->{size}
 		  && $f->{mtime} == $attr->{mtime}
 		  && $f->{mode}  == $attr->{mode}
 		  && (!$rs->{rsyncOpts}{group} || $f->{gid} == $attr->{gid})
-		  && (!$rs->{rsyncOpts}{owner} || $f->{uid} == $attr->{uid}) ) {
+		  && (!$rs->{rsyncOpts}{owner} || $f->{uid} == $attr->{uid})
+                  && (!$rs->{rsyncOpts}{"hard-links"}
+                            || $f->{hlink_self} == $attr->{hlink_self}) ) {
 		$rs->log("Skipping $f->{name} (same attr)")
 			    if ( $rs->{logLevel} >= 3
 			       && ($f->{mode} & S_IFMT) == S_IFREG );
@@ -656,6 +836,13 @@ sub fileCsumSend
                 # Remote file is special: no checksum needed.
                 #
                 next;
+            } elsif ( $rs->{rsyncOpts}{"hard-links"}
+                            && defined($f->{hlink})
+                            && !$f->{hlink_self} ) {
+                #
+                # Skip any hardlinks; the child will create them later
+                #
+                next;
             } elsif ( !defined($attr->{mode})
 			|| ($attr->{mode} & S_IFMT) != S_IFREG ) {
                 #
@@ -666,11 +853,7 @@ sub fileCsumSend
 		$rs->{fio}->unlink($f->{name}) if ( defined($attr->{mode}) );
 		$rs->log("Sending empty csums for $f->{name}")
 				    if ( $rs->{logLevel} >= 5 );
-                $rs->writeData(pack("V4",
-                            $n,
-                            0,
-                            $rs->{blockSize},
-                            0), 1);
+                $rs->write_sum_head($n, 0, $rs->{blockSize}, $csumLen, 0);
             } elsif ( ($blkSize = $rs->{fio}->csumStart($f, 0, $rs->{blockSize},
                                                         $phase)) < 0 ) {
 		#
@@ -678,17 +861,16 @@ sub fileCsumSend
 		#
 		$rs->log("Sending empty csums for $f->{name}")
 				    if ( $rs->{logLevel} >= 5 );
-                $rs->writeData(pack("V4",
-                            $n,
-                            0,
-                            $rs->{blockSize},
-                            0), 1);
+                $rs->write_sum_head($n, 0, $rs->{blockSize}, $csumLen, 0);
 	    } else {
 		#
 		# The local file is a regular file, so generate and
-		# send the checksums.  First compute adaptive block
-		# size, from $rs->{blockSize} to 16384 based on file
-                # size.
+		# send the checksums.
+                #
+
+                #
+                # Compute adaptive block size, from $rs->{blockSize}
+                # to 16384 based on file size.
 		#
                 if ( $blkSize <= 0 ) {
                     $blkSize = int($attr->{size} / 10000);
@@ -700,13 +882,10 @@ sub fileCsumSend
 						/ $blkSize);
 		$rs->log("Sending csums for $f->{name} (size=$attr->{size})")
 				if ( $rs->{logLevel} >= 5 );
-		$rs->writeData(pack("V4",
-			    $n,
-			    $blkCnt,
-			    $blkSize,
+                $rs->write_sum_head($n, $blkCnt, $blkSize, $csumLen,
                             $blkCnt > 0
                                 ? $attr->{size} - ($blkCnt - 1) * $blkSize
-                                : $attr->{size}));
+                                : $attr->{size});
 		my $nWrite = ($csumLen + 4) * $blkCnt;
 		while ( $blkCnt > 0 && $nWrite > 0 ) {
 		    my $thisCnt = $blkCnt > 256 ? 256 : $blkCnt;
@@ -764,7 +943,7 @@ sub pollChild
     my($FDread);
 
     return -1 if ( !defined($rs->{childFh}) );
-    $rs->log("pollChild($timeout)") if ( $rs->{logLevel} >= 10 );
+    $rs->log("pollChild($timeout)") if ( $rs->{logLevel} >= 12 );
 
     vec($FDread, fileno($rs->{childFh}), 1) = 1;
     my $ein = $FDread;
@@ -852,9 +1031,19 @@ sub fileCsumReceive
 	    last;
 	}
         my $f = $rs->{fileList}->get($fileNum);
-	return -1 if ( $rs->getChunk(12) < 0 );
-	($blkCnt, $blkSize, $remainder) = unpack("V3", $rs->{chunkData});
-	$rs->{chunkData} = substr($rs->{chunkData}, 12);
+        from_to($f->{name}, $rs->{clientCharset}, "utf8")
+                                if ( $rs->{clientCharset} ne "" );
+        if ( $rs->{protocol_version} >= 27 ) {
+            return -1 if ( $rs->getChunk(16) < 0 );
+            my $thisCsumLen;
+            ($blkCnt, $blkSize, $thisCsumLen, $remainder)
+                            = unpack("V4", $rs->{chunkData});
+            $rs->{chunkData} = substr($rs->{chunkData}, 16);
+        } else {
+            return -1 if ( $rs->getChunk(12) < 0 );
+            ($blkCnt, $blkSize, $remainder) = unpack("V3", $rs->{chunkData});
+            $rs->{chunkData} = substr($rs->{chunkData}, 12);
+        }
 	$rs->log("Got #$fileNum ($f->{name}), blkCnt=$blkCnt,"
                  . " blkSize=$blkSize, rem=$remainder")
 			if ( $rs->{logLevel} >= 5 );
@@ -895,7 +1084,7 @@ sub fileCsumReceive
         #
         ##$blkCnt = int(($attr->{size} + $blkSize - 1) / $blkSize);
         ##$remainder = $attr->{size} - ($blkCnt - 1) * $blkSize;
-        $rs->writeData(pack("V4", $fileNum, $blkCnt, $blkSize, $remainder));
+        $rs->write_sum_head($fileNum, $blkCnt, $blkSize, $csumLen, $remainder);
 
         if ( $fileSame ) {
 	    $rs->log("$f->{name}: unchanged") if ( $rs->{logLevel} >= 3 );
@@ -949,9 +1138,19 @@ sub fileDeltaGet
 	$fileStart = $fileNum + 1;
 
         my $f = $rs->{fileList}->get($fileNum);
-	return -1 if ( $rs->getChunk(12) < 0 );
-	($blkCnt, $blkSize, $remainder) = unpack("V3", $rs->{chunkData});
-	$rs->{chunkData} = substr($rs->{chunkData}, 12);
+        from_to($f->{name}, $rs->{clientCharset}, "utf8")
+                                if ( $rs->{clientCharset} ne "" );
+        if ( $rs->{protocol_version} >= 27 ) {
+            return -1 if ( $rs->getChunk(16) < 0 );
+            my $thisCsumLen;
+            ($blkCnt, $blkSize, $thisCsumLen, $remainder)
+                            = unpack("V4", $rs->{chunkData});
+            $rs->{chunkData} = substr($rs->{chunkData}, 16);
+        } else {
+            return -1 if ( $rs->getChunk(12) < 0 );
+            ($blkCnt, $blkSize, $remainder) = unpack("V3", $rs->{chunkData});
+            $rs->{chunkData} = substr($rs->{chunkData}, 12);
+        }
 	$rs->log("Starting file $fileNum ($f->{name}),"
 	    . " blkCnt=$blkCnt, blkSize=$blkSize, remainder=$remainder")
 		    if ( $rs->{logLevel} >= 5 );
@@ -987,6 +1186,11 @@ sub fileDeltaGet
                 my $ret = $rs->{fio}->fileDeltaRxNext(undef, $d);
             }
         }
+
+        #
+        # If this is 2nd phase, then set the attributes just for this file
+        #
+	$rs->{fio}->attribSet($f, 1) if ( $phase == 1 );
     }
     #
     # Make any remaining dirs or special files
@@ -994,6 +1198,24 @@ sub fileDeltaGet
     $rs->fileSpecialCreate($fileStart, undef) if ( $phase == 0 );
 
     $rs->log("Finished deltaGet phase $phase") if ( $rs->{logLevel} >= 2 );
+
+    #
+    # Finish up hardlinks at the very end
+    #
+    if ( $phase == 1 && $rs->{rsyncOpts}{"hard-links"} ) {
+        my $cnt = $rs->{fileList}->count;
+        for ( my $n = 0 ; $n < $cnt ; $n++ ) {
+            my $f = $rs->{fileList}->get($n);
+            next if ( !defined($f->{hlink}) || $f->{hlink_self} );
+            if ( $rs->{clientCharset} ne "" ) {
+                from_to($f->{name},  $rs->{clientCharset}, "utf8");
+                from_to($f->{hlink}, $rs->{clientCharset}, "utf8");
+            }
+            if ( $rs->{fio}->makeHardLink($f, 1) ) {
+                $rs->log("Error: makeHardlink($f->{name} -> $f->{hlink}) failed");
+            }
+        }
+    }
 }
 
 sub fileListSend
@@ -1007,8 +1229,12 @@ sub fileListSend
         preserve_devices    => $rs->{rsyncOpts}{devices},
         preserve_hard_links => $rs->{rsyncOpts}{"hard-links"},
         always_checksum     => $rs->{rsyncOpts}{checksum},
-        remote_version      => $rs->{remote_protocol},
+        protocol_version    => $rs->{protocol_version},
     });
+
+    if ( $rs->{rsyncOpts}{"hard-links"} ) {
+        $rs->{fileList}->init_hard_links();
+    }
 
     $rs->{fio}->fileListSend($rs->{fileList}, sub { $rs->writeData($_[0]); });
 
@@ -1028,6 +1254,44 @@ sub fileListSend
     # Sort and clean the file list
     #
     $rs->{fileList}->clean;
+
+    #
+    # Print out the sorted file list
+    #
+    if ( $rs->{logLevel} >= 4 ) {
+        my $cnt = $rs->{fileList}->count;
+        $rs->log("Sorted file list has $cnt entries");
+        for ( my $n = 0 ; $n < $cnt ; $n++ ) {
+            my $f = $rs->{fileList}->get($n);
+            from_to($f->{name}, $rs->{clientCharset}, "utf8")
+                                    if ( $rs->{clientCharset} ne "" );
+            $rs->log("PostSortFile $n: $f->{name}");
+        }
+    }
+}
+
+sub write_sum_head
+{
+    my($rs, $fileNum, $blkCnt, $blkSize, $csumLen, $remainder) = @_;
+
+    if ( $rs->{protocol_version} >= 27 ) {
+        #
+        # For protocols >= 27 we also send the csum length
+        # for this file.
+        #
+        $rs->writeData(pack("V5",
+                $fileNum,
+                $blkCnt,
+                $blkSize,
+                $csumLen,
+                $remainder), 0);
+    } else {
+        $rs->writeData(pack("V4",
+                $fileNum,
+                $blkCnt,
+                $blkSize,
+                $remainder), 0);
+    }
 }
 
 sub abort
@@ -1119,8 +1383,14 @@ sub getChunk
             $rs->{chunkData} .= $d;
         } else {
 	    $d =~ s/[\n\r]+$//;
+            from_to($d, $rs->{clientCharset}, "utf8")
+                                    if ( $rs->{clientCharset} ne "" );
             $rs->log("Remote[$code]: $d");
-	    $rs->{stats}{remoteErrCnt}++ if ( $code == 1 );
+            if ( $code == 1
+                    || $d =~ /^file has vanished: /
+                ) {
+                $rs->{stats}{remoteErrCnt}++
+            }
         }
     }
 }
@@ -1293,9 +1563,9 @@ File::RsyncP - Perl Rsync client
 =head1 DESCRIPTION
 
 File::RsyncP is a perl implementation of an Rsync client.  It is
-compatible with Rsync 2.5.5 (protocol version 26).  It can send
-or receive files, either by running rsync on the remote machine,
-or connecting to an rsyncd deamon on the remote machine.
+compatible with Rsync 2.5.5 - 2.6.3 (protocol versions 26-28).
+It can send or receive files, either by running rsync on the remote
+machine, or connecting to an rsyncd deamon on the remote machine.
 
 What use is File::RsyncP?  The main purpose is that File::RsyncP
 separates all file system I/O into a separate module, which can
@@ -1404,7 +1674,7 @@ remote is a sender) and finally all of rsyncArgs.
 
 =item protocol_version
 
-What we advertize our protocol version to be.  Default is 26.
+What we advertize our protocol version to be.  Default is 28.
 
 =item logHandler
 
@@ -1685,8 +1955,7 @@ features.  In particular, as of 0.10 only these options are supported:
         --relative|-R
 
 Hardlinks are currently not supported.  Other options that only
-affect the remote side (eg: --exclude or --include when receiving
-files from the remote) will work correctly since they are passed
+affect the remote side will work correctly since they are passed
 to the remote Rsync unchanged.
 
 =item *
@@ -1710,7 +1979,7 @@ versions of Rsync.
 
 File::RsyncP does not compute file deltas (ie: it behaves as though
 --whole-file is specified) or implement exclude or include options
-when sending file.  File::RsyncP does handle file deltas and exclude
+when sending files.  File::RsyncP does handle file deltas and exclude
 and include options when receiving files.
 
 =item *
@@ -1729,7 +1998,7 @@ File::RsyncP::FileList was written by Craig Barratt
 
 Rsync was written by Andrew Tridgell <tridge@samba.org>
 and Paul Mackerras.  It is available under a GPL license.
-See http://rsync.samba.org
+See http://rsync.samba.org.
 
 =head1 LICENSE
 

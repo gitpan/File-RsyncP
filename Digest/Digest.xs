@@ -36,12 +36,18 @@ MODULE = File::RsyncP::Digest		PACKAGE = File::RsyncP::Digest
 PROTOTYPES: DISABLE
 
 File::RsyncP::Digest
-new(packname = "File::RsyncP::Digest")
-	char *		packname
+new(packname = "File::RsyncP::Digest", protocol=26)
+	char *packname
+        int  protocol;
     CODE:
 	{
 	    RETVAL = (RsyncMD4_CTX *)safemalloc(sizeof(RsyncMD4_CTX));
 	    RsyncMD4Init(RETVAL);
+	    if ( protocol <= 26 ) {
+		RETVAL->rsyncMD4Bug = 1;
+	    } else {
+		RETVAL->rsyncMD4Bug = 0;
+	    }
 	}
     OUTPUT:
 	RETVAL
@@ -72,9 +78,9 @@ protocol(context, protocol=26)
     CODE:
 	{
 	    if ( protocol <= 26 ) {
-		context->rsyncBug = 1;
+		context->rsyncMD4Bug = 1;
 	    } else {
-		context->rsyncBug = 0;
+		context->rsyncMD4Bug = 0;
 	    }
 	    RETVAL = context;
 	}
@@ -119,11 +125,11 @@ digest2(context)
 	     * Return 2 MD4s (32 bytes): first is rsync buggy version
 	     * (protocol <= 26) and second is correct version (>= 27).
 	     */
-	    context2.rsyncBug = !context->rsyncBug;
+	    context2.rsyncMD4Bug = !context->rsyncMD4Bug;
 	    RsyncMD4FinalRsync(digeststr + 0,
-			context->rsyncBug ? context : &context2);
+			context->rsyncMD4Bug ? context : &context2);
 	    RsyncMD4FinalRsync(digeststr + 16,
-			context->rsyncBug ? &context2 : context);
+			context->rsyncMD4Bug ? &context2 : context);
 	    ST(0) = sv_2mortal(newSVpvn((char *)digeststr, 32));
 	}
 

@@ -1,5 +1,9 @@
 Revision history for Perl module File::RsyncP::FileList.
 
+0.62 Sun Jul  9 11:18:32 PDT 2006
+
+  - Complete rewrite based on rsync 2.6.3.
+
 0.51 Sun May  9 23:42:56 PDT 2004
 
   - No changes.

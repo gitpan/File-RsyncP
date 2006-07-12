@@ -92,7 +92,7 @@ RsyncMD4_CTX *context;                                        /* context */
   context->state[1] = 0xefcdab89;
   context->state[2] = 0x98badcfe;
   context->state[3] = 0x10325476;
-  context->rsyncBug = 1;
+  context->rsyncMD4Bug = 1;
 }
 
 /* MD4 block update operation. Continues an MD4 message-digest
@@ -170,13 +170,13 @@ RsyncMD4_CTX *context;                                        /* context */
 /*
  * MD4 finalization for Rsync compatability.
  *
- * If context->rsyncBug is set we emulate the rsync bug for protocol
+ * If context->rsyncMD4Bug is set we emulate the rsync bug for protocol
  * version <= 26 (rsync <= 2.5.6). Rsync has a bug where it doesn't
  * append the pad when the last fragment is empty (message size is a
  * multiple of 64).  Rsync also only has a 32 bit byte counter, so
  * the number of bits overflows for >= 512MB.
  *
- * If context->rsyncBug is clear we correctly implement md4 (rsync
+ * If context->rsyncMD4Bug is clear we correctly implement md4 (rsync
  * protocol >= 27).
  */
 void RsyncMD4FinalRsync (digest, context)
@@ -187,7 +187,7 @@ RsyncMD4_CTX *context;                                 /* context */
   unsigned int index, padLen;
 
   /* Save number of bits */
-  if ( context->rsyncBug ) {
+  if ( context->rsyncMD4Bug ) {
       context->count[1] = 0;	/* Rsync <= 2.5.6 bug */
   }
   RsyncMD4Encode (bits, context->count, 8);
@@ -195,7 +195,7 @@ RsyncMD4_CTX *context;                                 /* context */
   /* Pad out to 56 mod 64.
    */
   index = (unsigned int)((context->count[0] >> 3) & 0x3f);
-  if ( !context->rsyncBug || index > 0 ) {	/* Rsync <= 2.5.6 bug */
+  if ( !context->rsyncMD4Bug || index > 0 ) {	/* Rsync <= 2.5.6 bug */
       padLen = (index < 56) ? (56 - index) : (120 - index);
       RsyncMD4Update (context, PADDING, padLen);
 
