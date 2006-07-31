@@ -21,6 +21,7 @@
 
 #include "global.h"
 #include "md4.h"
+#include <string.h>
 
 /*
  * CHAR_OFFSET is 0 for rsync, and 31 for librsync.

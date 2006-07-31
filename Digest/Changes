@@ -1,5 +1,10 @@
 Revision history for Perl module File::RsyncP::Digest
 
+0.64 Sun Jul 30 19:31:45 PDT 2006
+
+  - Fixed some compiler warnings and verbose declaration
+    reported by Guillaume Filion and Rodrigo Real.
+
 0.51 Sun May  9 23:42:56 PDT 2004
 
   - Changed newSVpv() to newSVpvn() in Digest/Digest.xs to allow

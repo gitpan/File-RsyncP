@@ -36,7 +36,6 @@ FileList/wildmatch.h
 FileList/errcode.h
 FileList/install-sh
 FileList/flist.c
-FileList/tags
 FileList/typemap
 FileList/proto.h
 FileList/wildmatch.c

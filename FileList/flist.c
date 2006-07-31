@@ -42,7 +42,6 @@
 
 extern struct stats stats;
 
-static struct file_struct null_file;
 static char empty_sum[MD4_SUM_LENGTH];
 static unsigned int file_struct_len;
 
@@ -70,8 +69,6 @@ static mode_t from_wire_mode(int mode)
     }
     return (mode_t) mode;
 }
-
-static void send_directory(int f, struct file_list *flist, char *dir);
 
 /* we need this function because of the silly way in which duplicate
    entries are handled in the file lists - we can't change this
@@ -140,7 +137,6 @@ int32 read_int(struct file_list *f)
 
 int64 read_longint(struct file_list *f)
 {
-    char b[8];
     int32 ret = read_int(f);
     double d;
 

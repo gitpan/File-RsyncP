@@ -34,9 +34,6 @@ static int hlink_compare(struct file_struct **file1, struct file_struct **file2)
     return file_compare(file1, file2);
 }
 
-static struct file_struct **hlink_list;
-static int hlink_count;
-
 #define LINKED(p1,p2) ((p1)->F_DEV == (p2)->F_DEV \
 		    && (p1)->F_INODE == (p2)->F_INODE)
 

@@ -67,6 +67,8 @@ int flist_find(struct file_list *flist, struct file_struct *f);
 void clear_file(int i, struct file_list *flist);
 struct file_list *flist_new(int with_hlink, char *msg, int preserve_hard_links);
 void flist_free(struct file_list *flist);
+int flistDecodeBytes(struct file_list *f, unsigned char *bytes, uint32 nBytes);
+void clean_flist(struct file_list *flist, int strip_root, int no_dups);
 int f_name_cmp(struct file_struct *f1, struct file_struct *f2);
 char *f_name_to(struct file_struct *f, char *fbuf);
 char *f_name(struct file_struct *f);

@@ -50,7 +50,7 @@ static int getHashString(SV *opts, char *param, char *def,
 {
     SV **vp;
     char *str;
-    int len;
+    unsigned int len;
 
     if ( !opts || !SvROK(opts)
                || SvTYPE(SvRV(opts)) != SVt_PVHV
@@ -288,7 +288,7 @@ clean(flist)
 	File::RsyncP::FileList	flist
     CODE:
     {
-        clean_flist(flist, 0);
+        clean_flist(flist, 0, 1);
     }
 
 void
@@ -471,11 +471,11 @@ exclude_check(flist, pathSV, isDir)
     INPUT:
 	File::RsyncP::FileList flist
 	SV *pathSV
-	char *path = (unsigned char *)SvPV(pathSV, pathLen);
+	unsigned char *path = (unsigned char *)SvPV(pathSV, pathLen);
         unsigned int isDir
     CODE:
     {
-        RETVAL = check_exclude(flist, path, isDir);
+        RETVAL = check_exclude(flist, (char*)path, isDir);
     }
     OUTPUT:
         RETVAL
@@ -487,11 +487,11 @@ exclude_add(flist, patternSV, flags)
     INPUT:
 	File::RsyncP::FileList flist
 	SV *patternSV
-	char *pattern = (unsigned char *)SvPV(patternSV, patternLen);
+	unsigned char *pattern = (unsigned char *)SvPV(patternSV, patternLen);
         unsigned int flags
     CODE:
     {
-        add_exclude(flist, pattern, flags);
+        add_exclude(flist, (char*)pattern, flags);
     }
 
 void
@@ -501,11 +501,11 @@ exclude_add_file(flist, fileNameSV, flags)
     INPUT:
 	File::RsyncP::FileList flist
 	SV *fileNameSV
-	char *fileName = (unsigned char *)SvPV(fileNameSV, fileNameLen);
+	unsigned char *fileName = (unsigned char *)SvPV(fileNameSV, fileNameLen);
         unsigned int flags
     CODE:
     {
-        add_exclude_file(flist, fileName, flags);
+        add_exclude_file(flist, (char*)fileName, flags);
     }
 
 void
@@ -550,7 +550,6 @@ exclude_list_get(flist)
 	File::RsyncP::FileList flist
     CODE:
         {
-            char *pattern;
             AV *result;
             struct exclude_struct *ent;
 

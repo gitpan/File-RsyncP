@@ -26,7 +26,7 @@
 
 #include "rsync.h"
 
-static int verbose;
+static int verbose = 0;
 
 /** Build an exclude structure given an exclude pattern. */
 static void make_exclude(struct file_list *f, struct exclude_list_struct *listp,
@@ -259,7 +259,7 @@ static const char *get_exclude_tok(const char *p, unsigned int *len_ptr,
                 cp++;
         len = cp - s;
     } else
-        len = strlen(s);
+        len = strlen((const char *)s);
 
     if (*p == '!' && len == 1 && !(xflags & XFLG_WORDS_ONLY))
         mflags |= MATCHFLG_CLEAR_LIST;
@@ -312,7 +312,6 @@ void add_exclude_file(struct file_list *f, const char *fname, int xflags)
     char line[MAXPATHLEN+3]; /* Room for "x " prefix and trailing slash. */
     char *eob = line + sizeof line - 1;
     int word_split = xflags & XFLG_WORD_SPLIT;
-    struct exclude_list_struct *listp = &f->exclude_list;
 
     if (!fname || !*fname)
         return;
