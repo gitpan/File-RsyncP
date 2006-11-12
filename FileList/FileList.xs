@@ -191,7 +191,7 @@ get(flist, index)
         HV *rh;
         struct file_struct *file;
 
-        if ( index >= flist->count ) {
+        if ( index >= flist->count || !flist->files[index]->basename ) {
             XSRETURN_UNDEF; 
         }
         file = flist->files[index];

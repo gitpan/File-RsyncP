@@ -13,6 +13,7 @@ WriteMakefile(
                          flist$(OBJ_EXT)
                          hlink$(OBJ_EXT)
                          pool_alloc$(OBJ_EXT)
+                         snprintf$(OBJ_EXT)
                          wildmatch$(OBJ_EXT)
                         ],
     'depend'        => { 'FileList.o' => 'config.h' },

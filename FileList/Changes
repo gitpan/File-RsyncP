@@ -1,5 +1,12 @@
 Revision history for Perl module File::RsyncP::FileList.
 
+0.66 Sun Oct 29 10:15:15 PST 2006
+
+  - Applied patches from Mark Weaver to handle skipping duplicate
+    file names.
+
+  - Added snprintf.c to handle solaris configure failures.
+
 0.64 Sun Jul 30 19:31:45 PDT 2006
 
   - Fixed some compiler warnings and verbose declaration

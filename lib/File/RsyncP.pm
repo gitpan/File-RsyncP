@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.64, released 30 Jul 2006.
+# Version 0.66, released 29 Oct 2006.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -52,7 +52,7 @@ use Encode qw/from_to/;
 use Fcntl;
 
 use vars qw($VERSION);
-$VERSION = '0.64';
+$VERSION = '0.66';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -640,6 +640,7 @@ sub partialFileListPopulate
     my $cnt = $rs->{fileList}->count;
     for ( my $n = 0 ; $n < $cnt ; $n++ ) {
 	my $f = $rs->{fileList}->get($n);
+	next if ( !defined($f) );
         from_to($f->{name}, $rs->{clientCharset}, "utf8")
                                 if ( $rs->{clientCharset} ne "" );
 	my $attr = $rs->{fio}->attribGet($f);
@@ -651,7 +652,7 @@ sub partialFileListPopulate
 	if ( !$thisIgnoreAttr
 	      && $f->{size}  == $attr->{size}
 	      && $f->{mtime} == $attr->{mtime}
-	      && $f->{mode}  == $attr->{mode}
+	      && (!$rs->{rsyncOpts}{perms} || $f->{mode} == $attr->{mode})
 	      && (!$rs->{rsyncOpts}{group} || $f->{gid} == $attr->{gid})
 	      && (!$rs->{rsyncOpts}{owner} || $f->{uid} == $attr->{uid})
 	      && (!$rs->{rsyncOpts}{"hard-links"}
@@ -722,6 +723,7 @@ sub fileListReceive
 	    my $end = $rs->{fileList}->count;
 	    while ( $curr < $end ) {
 		my $f = $rs->{fileList}->get($curr);
+		next if ( !defined($f) );
                 from_to($f->{name}, $rs->{clientCharset}, "utf8")
                                         if ( $rs->{clientCharset} ne "" );
 		$rs->log("Got file ($curr of $end): $f->{name}");
@@ -752,6 +754,7 @@ sub fileSpecialCreate
     $end = $rs->{fileList}->count if ( !defined($end) );
     for ( my $n = $start ; $n < $end ; $n++ ) {
 	my $f = $rs->{fileList}->get($n);
+	next if ( !defined($f) );
         from_to($f->{name}, $rs->{clientCharset}, "utf8")
                                 if ( $rs->{clientCharset} ne "" );
 	my $attr = $rs->{fio}->attribGet($f);
@@ -804,6 +807,7 @@ sub fileCsumSend
 	if ( @{$rs->{doList}} ) {
 	    my $n = shift(@{$rs->{doList}});
             my $f = $rs->{fileList}->get($n);
+	    next if ( !defined($f) );
             from_to($f->{name}, $rs->{clientCharset}, "utf8")
                                     if ( $rs->{clientCharset} ne "" );
 
@@ -823,7 +827,7 @@ sub fileCsumSend
                   && $phase == 0
 		  && $f->{size}  == $attr->{size}
 		  && $f->{mtime} == $attr->{mtime}
-		  && $f->{mode}  == $attr->{mode}
+		  && (!$rs->{rsyncOpts}{perms} || $f->{mode} == $attr->{mode})
 		  && (!$rs->{rsyncOpts}{group} || $f->{gid} == $attr->{gid})
 		  && (!$rs->{rsyncOpts}{owner} || $f->{uid} == $attr->{uid})
                   && (!$rs->{rsyncOpts}{"hard-links"}
@@ -1035,6 +1039,7 @@ sub fileCsumReceive
 	    last;
 	}
         my $f = $rs->{fileList}->get($fileNum);
+	next if ( !defined($f) );
         from_to($f->{name}, $rs->{clientCharset}, "utf8")
                                 if ( $rs->{clientCharset} ne "" );
         if ( $rs->{protocol_version} >= 27 ) {
@@ -1142,6 +1147,7 @@ sub fileDeltaGet
 	$fileStart = $fileNum + 1;
 
         my $f = $rs->{fileList}->get($fileNum);
+	next if ( !defined($f) );
         from_to($f->{name}, $rs->{clientCharset}, "utf8")
                                 if ( $rs->{clientCharset} ne "" );
         if ( $rs->{protocol_version} >= 27 ) {
@@ -1210,6 +1216,7 @@ sub fileDeltaGet
         my $cnt = $rs->{fileList}->count;
         for ( my $n = 0 ; $n < $cnt ; $n++ ) {
             my $f = $rs->{fileList}->get($n);
+	    next if ( !defined($f) );
             next if ( !defined($f->{hlink}) || $f->{hlink_self} );
             if ( $rs->{clientCharset} ne "" ) {
                 from_to($f->{name},  $rs->{clientCharset}, "utf8");
@@ -1267,6 +1274,7 @@ sub fileListSend
         $rs->log("Sorted file list has $cnt entries");
         for ( my $n = 0 ; $n < $cnt ; $n++ ) {
             my $f = $rs->{fileList}->get($n);
+	    next if ( !defined($f) );
             from_to($f->{name}, $rs->{clientCharset}, "utf8")
                                     if ( $rs->{clientCharset} ne "" );
             $rs->log("PostSortFile $n: $f->{name}");

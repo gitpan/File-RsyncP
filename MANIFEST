@@ -38,5 +38,6 @@ FileList/install-sh
 FileList/flist.c
 FileList/typemap
 FileList/proto.h
+FileList/snprintf.c
 FileList/wildmatch.c
 FileList/FileList.pm
