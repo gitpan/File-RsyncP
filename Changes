@@ -1,5 +1,12 @@
 Revision history for Perl module File::RsyncP.
 
+0.68 Sat Nov 18 18:29:31 PST 2006
+
+  - Convert exclude/include log messages to utf8.
+
+  - Fixed 2nd digest returned by File::RsyncP::Digest->digest2()
+    when protocol_version <= 26.
+
 0.66 Sun Oct 29 10:15:15 PST 2006
 
   - Support turning off --perms option, reported by Cameron Dale.

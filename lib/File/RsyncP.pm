@@ -32,7 +32,7 @@
 #
 #========================================================================
 #
-# Version 0.66, released 29 Oct 2006.
+# Version 0.68, released 18 Nov 2006.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -52,7 +52,7 @@ use Encode qw/from_to/;
 use Fcntl;
 
 use vars qw($VERSION);
-$VERSION = '0.66';
+$VERSION = '0.68';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -703,6 +703,8 @@ sub fileListReceive
     $rs->writeData($rs->{fileList}->encodeData(), 1);
     if ( $rs->{logLevel} >= 1 ) {
         foreach my $exc ( @{$rs->{fileList}->exclude_list_get()} ) {
+            from_to($exc->{pattern}, $rs->{clientCharset}, "utf8")
+                                    if ( $rs->{clientCharset} ne "" );
             if ( $exc->{flags} & (1 << 4) ) {
                 $rs->log("Sent include: $exc->{pattern}");
             } else {

@@ -120,16 +120,17 @@ digest2(context)
 	{
 	    unsigned char digeststr[32];
 	    RsyncMD4_CTX context2 = *context;
+            int rsyncMD4Bug = context->rsyncMD4Bug;
 
 	    /*
 	     * Return 2 MD4s (32 bytes): first is rsync buggy version
 	     * (protocol <= 26) and second is correct version (>= 27).
 	     */
-	    context2.rsyncMD4Bug = !context->rsyncMD4Bug;
+	    context2.rsyncMD4Bug = !rsyncMD4Bug;
 	    RsyncMD4FinalRsync(digeststr + 0,
-			context->rsyncMD4Bug ? context : &context2);
+			rsyncMD4Bug ? context : &context2);
 	    RsyncMD4FinalRsync(digeststr + 16,
-			context->rsyncMD4Bug ? &context2 : context);
+			rsyncMD4Bug ? &context2 : context);
 	    ST(0) = sv_2mortal(newSVpvn((char *)digeststr, 32));
 	}
 

@@ -1,5 +1,10 @@
 Revision history for Perl module File::RsyncP::Digest
 
+0.68 Sat Nov 18 18:29:31 PST 2006
+
+  - Fixed 2nd digest returned by File::RsyncP::Digest->digest2()
+    when protocol_version <= 26.
+
 0.64 Sun Jul 30 19:31:45 PDT 2006
 
   - Fixed some compiler warnings and verbose declaration
