@@ -50,7 +50,7 @@ static int getHashString(SV *opts, char *param, char *def,
 {
     SV **vp;
     char *str;
-    unsigned int len;
+    STRLEN len;
 
     if ( !opts || !SvROK(opts)
                || SvTYPE(SvRV(opts)) != SVt_PVHV

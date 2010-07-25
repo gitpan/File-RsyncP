@@ -11,10 +11,11 @@
 #   Craig Barratt  <cbarratt@users.sourceforge.net>
 #
 # COPYRIGHT
-#   File::RsyncP is Copyright (C) 2002  Craig Barratt.
+#   File::RsyncP is Copyright (C) 2002-2010  Craig Barratt.
 #
 #   Rsync is Copyright (C) 1996-2001 by Andrew Tridgell, 1996 by Paul
-#   Mackerras, and 2001, 2002 by Martin Pool.
+#   Mackerras, 2001-2002 by Martin Pool, and 2003-2009 by Wayne Davison,
+#   and others.
 #
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -32,7 +33,7 @@
 #
 #========================================================================
 #
-# Version 0.68, released 18 Nov 2006.
+# Version 0.70, released 25 Jul 2010.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -52,7 +53,7 @@ use Encode qw/from_to/;
 use Fcntl;
 
 use vars qw($VERSION);
-$VERSION = '0.68';
+$VERSION = '0.70';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
@@ -109,7 +110,7 @@ sub new
                 "exclude-from=s",  sub { optExclude($rs, @_); },
                 "include=s",       sub { optExclude($rs, @_); },
                 "include-from=s",  sub { optExclude($rs, @_); },
-                "cvs-exclude|C=s", sub { optExclude($rs, @_); },
+                "cvs-exclude|C",   sub { optExclude($rs, @_); },
 	    ) );
 
     #
@@ -210,7 +211,7 @@ sub excludeStrip
             "exclude-from=s",  sub { },
             "include=s",       sub { },
             "include-from=s",  sub { },
-            "cvs-exclude|C=s", sub { },
+            "cvs-exclude|C",   sub { },
         );
 
     return \@ARGV;

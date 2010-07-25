@@ -1,5 +1,12 @@
 Revision history for Perl module File::RsyncP::Digest
 
+0.70 Sun Sat Jul 10 09:54:12 PDT 2010
+
+  - Fixed adler32_checksum() in Digest/rsync_lib.c for case
+    where native char is unsigned (eg: arm architecture).
+
+  - Changed print format for error message in blockDigestUpdate().
+
 0.68 Sat Nov 18 18:29:31 PST 2006
 
   - Fixed 2nd digest returned by File::RsyncP::Digest->digest2()

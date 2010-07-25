@@ -7086,7 +7086,7 @@ _ACEOF
 
 fi
 
-TYPE_SOCKLEN_T
+
 
 echo "$as_me:$LINENO: checking for errno in errno.h" >&5
 echo $ECHO_N "checking for errno in errno.h... $ECHO_C" >&6

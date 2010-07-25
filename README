@@ -1,12 +1,12 @@
 File::RsyncP
 ============
 
-Version 0.68, released 18 Nov 2006.
+Version 0.70, released 25 Jul 2010.
 
 File::RsyncP is a perl implementation of an Rsync client.  It is
-compatible with Rsync 2.5.5 (protocol version 26).  It can send
-or receive files, either by running rsync on the remote machine,
-or connecting to an rsyncd deamon on the remote machine.
+compatible with Rsync 2.x (protocol versions up to 28).  It can send
+or receive files, either by running rsync on the remote machine, or
+connecting to an rsyncd deamon on the remote machine.
 
 What use is File::RsyncP?  The main purpose is that File::RsyncP
 seperates all file system I/O into a seperate module, which can
@@ -37,10 +37,15 @@ To install this module type the following:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2002-2004 Craig Barratt <cbarratt@users.sourceforge.net>
+Non-rsync code is copyright (C) 2002-2010 Craig Barratt
+<cbarratt@users.sourceforge.net>
 
 Rsync is Copyright (C) 1996-2001 by Andrew Tridgell, 1996 by Paul
-Mackerras, and 2001, 2002 by Martin Pool.
+Mackerras, 2001-2002 by Martin Pool, and 2003-2009 by Wayne Davison,
+and others.
+
+MD4 Message-Digest Algorithm is Copyright (C) 1990-2, RSA Data
+Security, Inc.  All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

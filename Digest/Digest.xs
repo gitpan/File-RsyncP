@@ -207,7 +207,7 @@ blockDigestUpdate(context, dataV, blockSize=700, blockLastLen=0, md4DigestLen=16
                                           : 0)
                            + (blockLastLen % 64) ) {
                 /* TODO: provide a decent error message */
-                printf("len = %d is wrong\n", len);
+                printf("len = %u is wrong\n", (unsigned int)len);
                 blockCnt = 0;
             }
 	    if ( md4DigestLen > 16 || md4DigestLen < 0 ) md4DigestLen = 16;

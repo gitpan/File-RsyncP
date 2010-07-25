@@ -30,7 +30,7 @@
 #
 #========================================================================
 #
-# Version 0.68, released 18 Nov 2006.
+# Version 0.70, released 25 Jul 2010.
 #
 # See http://perlrsync.sourceforge.net.
 #
@@ -44,7 +44,7 @@ use File::Path;
 use File::Find;
 
 use vars qw($VERSION);
-$VERSION = '0.68';
+$VERSION = '0.70';
 
 use constant S_IFMT       => 0170000;	# type of file
 use constant S_IFDIR      => 0040000; 	# directory
